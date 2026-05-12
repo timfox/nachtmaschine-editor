@@ -1,16 +1,6 @@
-# TrenchBroom
+# Nacht Maschine World Editor
 
-[![TrenchBroom Icon](app/TrenchBroom/resources/graphics/images/AppIcon.png)](https://www.youtube.com/watch?v=shcAvnYp9ow)
-
-TrenchBroom is a modern cross-platform level editor for Quake-engine based games.
-
-- Trailer:   https://www.youtube.com/watch?v=shcAvnYp9ow
-- Website:   https://github.com/TrenchBroom/TrenchBroom
-- Discord:   https://discord.gg/WGf9uve
-- Mastodon:  https://mastodon.gamedev.place/@trenchbroom
-- Bluesky:   https://bsky.app/profile/trenchbroom.bsky.social
-- Video Tutorial Series:  https://www.youtube.com/playlist?list=PLgDKRPte5Y0AZ_K_PZbWbgBAEt5xf74aE
-- Manual:    https://trenchbroom.github.io/manual/latest
+This editor is a modern cross-platform 3d level editor.
 
 ## Features
 * **General**
@@ -38,15 +28,6 @@ TrenchBroom is a modern cross-platform level editor for Quake-engine based games
 	- Entity link visualization
 	- Displays 3D models in the editor
 	- Smart entity property editors
-* **Supported Games**
-	- Quake (Standard and Valve 220 file formats)
-	- Quake 2
-	- Quake 3 (partial, no patches or brush primitives yet)
-	- Hexen 2
-	- Daikatana
-	- Generic (for custom engines)
-	- More games can be supported with custom game configurations
-
 
 ## Releases
 - Binary builds are available from [releases](https://github.com/kduske/TrenchBroom/releases).
