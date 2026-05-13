@@ -250,6 +250,11 @@ inline auto CameraAltMoveInvert =
   Preference<bool>{"Controls/Camera/Invert zoom direction when using alt to move", false};
 inline auto CameraMoveInCursorDir =
   Preference<bool>{"Controls/Camera/Move camera in cursor dir", false};
+/** 0 = TrenchBroom (3D: RMB look, MMB pan, Alt+RMB orbit). 1 = Maya (3D: Alt+LMB orbit, Alt+MMB pan, Alt+RMB dolly; 2D: RMB pan, Alt+RMB zoom-drag, Alt+MMB pan when “Alt + middle” is on). */
+inline constexpr int CameraNavigationScheme_TrenchBroom = 0;
+inline constexpr int CameraNavigationScheme_Maya = 1;
+inline auto CameraNavigationScheme = Preference<int>{
+  "Controls/Camera/Navigation scheme", CameraNavigationScheme_Maya};
 inline auto CameraFov = Preference<float>{"Controls/Camera/Field of vision", 90.0f};
 
 inline constexpr auto MinCameraFlyMoveSpeed = 0.1f;
@@ -268,7 +273,7 @@ inline auto CameraFlyLeft =
 inline auto CameraFlyRight =
   Preference<QKeySequence>{"Controls/Camera/Move right", QKeySequence{'D'}};
 inline auto CameraFlyUp =
-  Preference<QKeySequence>{"Controls/Camera/Move up", QKeySequence{'Q'}};
+  Preference<QKeySequence>{"Controls/Camera/Move up", QKeySequence{'Z'}};
 inline auto CameraFlyDown =
   Preference<QKeySequence>{"Controls/Camera/Move down", QKeySequence{'X'}};
 

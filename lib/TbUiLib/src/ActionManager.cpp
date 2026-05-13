@@ -1399,7 +1399,7 @@ void ActionManager::createToolsMenu()
     "Menu/Edit/Tools/Rotate Tool",
     QObject::tr("Rotate Tool"),
     ActionContext::Any,
-    QKeySequence{Qt::Key_R},
+    QKeySequence{Qt::Key_E},
     [](auto& context) { context.mapWindow().toggleRotateTool(); },
     [](const auto& context) {
       return context.hasDocument() && context.mapWindow().canToggleRotateTool();
@@ -1413,7 +1413,7 @@ void ActionManager::createToolsMenu()
     "Menu/Edit/Tools/Scale Tool",
     QObject::tr("Scale Tool"),
     ActionContext::Any,
-    QKeySequence{Qt::Key_T},
+    QKeySequence{Qt::Key_R},
     [](auto& context) { context.mapWindow().toggleScaleTool(); },
     [](const auto& context) {
       return context.hasDocument() && context.mapWindow().canToggleScaleTool();
@@ -1427,7 +1427,7 @@ void ActionManager::createToolsMenu()
     "Menu/Edit/Tools/Shear Tool",
     QObject::tr("Shear Tool"),
     ActionContext::Any,
-    QKeySequence{Qt::Key_G},
+    QKeySequence{Qt::SHIFT | Qt::Key_G},
     [](auto& context) { context.mapWindow().toggleShearTool(); },
     [](const auto& context) {
       return context.hasDocument() && context.mapWindow().canToggleShearTool();
@@ -1455,7 +1455,7 @@ void ActionManager::createToolsMenu()
     "Menu/Edit/Tools/Edge Tool",
     QObject::tr("Edge Tool"),
     ActionContext::Any,
-    QKeySequence{Qt::Key_E},
+    QKeySequence{Qt::SHIFT | Qt::Key_E},
     [](auto& context) { context.mapWindow().toggleEdgeTool(); },
     [](const auto& context) {
       return context.hasDocument() && context.mapWindow().canToggleEdgeTool();
@@ -1469,7 +1469,7 @@ void ActionManager::createToolsMenu()
     "Menu/Edit/Tools/Face Tool",
     QObject::tr("Face Tool"),
     ActionContext::Any,
-    QKeySequence{Qt::Key_F},
+    QKeySequence{Qt::SHIFT | Qt::Key_F},
     [](auto& context) { context.mapWindow().toggleFaceTool(); },
     [](const auto& context) {
       return context.hasDocument() && context.mapWindow().canToggleFaceTool();
@@ -1483,7 +1483,7 @@ void ActionManager::createToolsMenu()
     "Controls/Map view/Deactivate current tool",
     QObject::tr("Deactivate Current Tool"),
     ActionContext::Any,
-    QKeySequence{Qt::SHIFT | Qt::Key_Escape},
+    QKeySequence{Qt::Key_Q},
     [](auto& context) { context.mapView().deactivateCurrentTool(); },
     [](const auto& context) { return context.hasDocument(); },
     [](const auto& context) {
@@ -1708,7 +1708,7 @@ void ActionManager::createViewMenu()
     "Menu/View/Camera/Focus on Selection",
     QObject::tr("Focus Camera on Selection"),
     ActionContext::Any,
-    QKeySequence{Qt::CTRL | Qt::Key_U},
+    QKeySequence{Qt::Key_F},
     [](auto& context) { context.mapWindow().focusCameraOnSelection(); },
     [](const auto& context) {
       return context.hasDocument() && context.mapWindow().canFocusCamera();

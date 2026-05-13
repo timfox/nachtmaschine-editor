@@ -1,0 +1,62 @@
+// Nachtmaschine / idTech 4–style entities for TrenchBroom + nachtmap.
+// Extend with project-specific defs; engine also supports exporting FGD via in-game tooling.
+
+@SolidClass = worldspawn : "Worldspawn (exactly one per map)"
+[
+	message(string) : "Map title / description"
+]
+
+@SolidClass color(0 127 204) = func_static : "Brush model (structural or movable)"
+[
+	spawnclass(string) : "Spawn class" : "idStaticEntity"
+	solid(boolean) : "Solid when visible" : 1
+	noclipmodel(boolean) : "Skip collision model for mesh statics" : 0
+	hide(boolean) : "Start hidden (toggle with trigger)"
+	inline(boolean) : "Bake mesh into BSP at dmap"
+	angles(string) : "Pitch yaw roll" : "0 0 0"
+	model(string) : "Mesh path (e.g. models/mapobjects/...)"
+]
+
+@SolidClass color(128 128 128) = func_detail : "Detail geometry (does not split structural BSP)"
+[
+]
+
+@PointClass size(-8 -8 -8, 8 8 8) color(200 180 0) = misc_model : "Point model (render mesh)"
+[
+	model(string) : "Model path"
+	angles(string) : "Pitch yaw roll" : "0 0 0"
+]
+
+@PointClass color(255 255 0) = light : "Point light"
+[
+	_light_radius(string) : "Radius" : "300"
+	_color(string) : "Color (R G B)" : "1 1 1"
+	light_radius(string) : "Alias radius key" : "300"
+]
+
+@PointClass size(-16 -16 -24, 16 16 32) color(0 255 0) = info_player_start : "Single-player start"
+[
+	name(string) : "Targetname"
+	angles(string) : "View angles" : "0 0 0"
+]
+
+@PointClass size(-16 -16 -24, 16 16 32) color(0 200 255) = info_player_deathmatch : "Deathmatch / team spawn"
+[
+	name(string) : "Targetname"
+	angles(string) : "View angles" : "0 0 0"
+]
+
+@PointClass size(-8 -8 -8, 8 8 8) color(200 200 200) = info_null : "Logical anchor / target endpoint"
+[
+	targetname(string) : "Targetname"
+]
+
+@PointClass size(-8 -8 -8, 8 8 8) color(255 200 0) = speaker : "Ambient sound source"
+[
+	s_shader(string) : "Shader / sound path"
+]
+
+@SolidClass color(255 128 0) = trigger_once : "Brush trigger (fires once)"
+[
+	target(string) : "Target entity"
+]

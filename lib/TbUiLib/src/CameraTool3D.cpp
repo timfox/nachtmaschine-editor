@@ -39,6 +39,11 @@ namespace tb::ui
 namespace
 {
 
+bool navigationMaya()
+{
+  return pref(Preferences::CameraNavigationScheme) == Preferences::CameraNavigationScheme_Maya;
+}
+
 bool shouldMove(const InputState& inputState)
 {
   return (
@@ -49,6 +54,10 @@ bool shouldMove(const InputState& inputState)
 
 bool shouldLook(const InputState& inputState)
 {
+  if (navigationMaya())
+  {
+    return false;
+  }
   return (
     inputState.mouseButtonsPressed(MouseButtons::Right)
     && inputState.modifierKeysPressed(ModifierKeys::None));
@@ -56,6 +65,11 @@ bool shouldLook(const InputState& inputState)
 
 bool shouldPan(const InputState& inputState)
 {
+  if (navigationMaya())
+  {
+    return inputState.mouseButtonsPressed(MouseButtons::Middle)
+           && inputState.modifierKeysPressed(ModifierKeys::Alt);
+  }
   return (
     inputState.mouseButtonsPressed(MouseButtons::Middle)
     && (inputState.modifierKeysPressed(ModifierKeys::None) || inputState.modifierKeysPressed(ModifierKeys::Alt)));
@@ -63,9 +77,21 @@ bool shouldPan(const InputState& inputState)
 
 bool shouldOrbit(const InputState& inputState)
 {
+  if (navigationMaya())
+  {
+    return inputState.mouseButtonsPressed(MouseButtons::Left)
+           && inputState.modifierKeysPressed(ModifierKeys::Alt);
+  }
   return (
     inputState.mouseButtonsPressed(MouseButtons::Right)
     && inputState.modifierKeysPressed(ModifierKeys::Alt));
+}
+
+bool shouldDolly(const InputState& inputState)
+{
+  return navigationMaya()
+         && inputState.mouseButtonsPressed(MouseButtons::Right)
+         && inputState.modifierKeysPressed(ModifierKeys::Alt);
 }
 
 bool shouldAdjustFlySpeed(const InputState& inputState)
@@ -214,14 +240,39 @@ public:
   void cancel() override {}
 };
 
-class PanDragTracker : public GestureTracker
+class DollyDragTracker : public GestureTracker
 {
 private:
   gl::PerspectiveCamera& m_camera;
 
 public:
-  explicit PanDragTracker(gl::PerspectiveCamera& camera)
+  explicit DollyDragTracker(gl::PerspectiveCamera& camera)
     : m_camera{camera}
+  {
+  }
+
+  bool update(const InputState& inputState) override
+  {
+    const auto dy = static_cast<float>(inputState.mouseDY());
+    const auto distance = -dy * moveSpeed(m_camera, true);
+    m_camera.moveBy(distance * m_camera.direction());
+    return true;
+  }
+
+  void end(const InputState&) override {}
+  void cancel() override {}
+};
+
+class PanDragTracker : public GestureTracker
+{
+private:
+  gl::PerspectiveCamera& m_camera;
+  bool m_forceScreenRelativePan;
+
+public:
+  explicit PanDragTracker(gl::PerspectiveCamera& camera, const bool forceScreenRelativePan = false)
+    : m_camera{camera}
+    , m_forceScreenRelativePan{forceScreenRelativePan}
   {
   }
 
@@ -229,7 +280,9 @@ public:
   {
     const auto altMove = pref(Preferences::CameraEnableAltMove);
     auto delta = vm::vec3f{};
-    if (altMove && inputState.modifierKeysPressed(ModifierKeys::Alt))
+    const auto useAltMovePath =
+      !m_forceScreenRelativePan && altMove && inputState.modifierKeysPressed(ModifierKeys::Alt);
+    if (useAltMovePath)
     {
       delta = delta
               + static_cast<float>(inputState.mouseDX()) * panSpeedH(m_camera)
@@ -276,6 +329,23 @@ const Tool& CameraTool3D::tool() const
 
 void CameraTool3D::mouseScroll(const InputState& inputState)
 {
+  if (navigationMaya()
+      && inputState.mouseButtonsPressed(MouseButtons::Right)
+      && inputState.checkModifierKeys(
+        ModifierKeyPressed::No, ModifierKeyPressed::No, ModifierKeyPressed::No))
+  {
+    const auto factor = pref(Preferences::CameraMouseWheelInvert) ? -1.0f : 1.0f;
+    const auto scrollDist = inputState.scrollY();
+    const auto speed = pref(Preferences::CameraFlyMoveSpeed);
+    const auto deltaSpeed = factor * speed * 0.05f * scrollDist;
+    const auto newSpeed = vm::clamp(
+      speed + deltaSpeed,
+      Preferences::MinCameraFlyMoveSpeed,
+      Preferences::MaxCameraFlyMoveSpeed);
+    setPref(Preferences::CameraFlyMoveSpeed, newSpeed);
+    return;
+  }
+
   const float factor = pref(Preferences::CameraMouseWheelInvert) ? -1.0f : 1.0f;
   const bool zoom = inputState.modifierKeysPressed(ModifierKeys::Shift);
   const float scrollDist =
@@ -309,6 +379,11 @@ std::unique_ptr<GestureTracker> CameraTool3D::acceptMouseDrag(
 {
   using namespace mdl::HitFilters;
 
+  if (shouldDolly(inputState))
+  {
+    return std::make_unique<DollyDragTracker>(m_camera);
+  }
+
   if (shouldOrbit(inputState))
   {
     const auto& hit =
@@ -325,7 +400,7 @@ std::unique_ptr<GestureTracker> CameraTool3D::acceptMouseDrag(
 
   if (shouldPan(inputState))
   {
-    return std::make_unique<PanDragTracker>(m_camera);
+    return std::make_unique<PanDragTracker>(m_camera, navigationMaya());
   }
 
   return nullptr;

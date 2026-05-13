@@ -20,6 +20,7 @@
 #include "ui/MousePreferencePane.h"
 
 #include <QCheckBox>
+#include <QComboBox>
 #include <QLabel>
 #include <QSignalBlocker>
 
@@ -48,6 +49,14 @@ MousePreferencePane::MousePreferencePane(QWidget* parent)
 
 void MousePreferencePane::createGui()
 {
+  m_navigationSchemeCombo = new QComboBox{};
+  m_navigationSchemeCombo->addItem(
+    tr("TrenchBroom (RMB look, MMB pan, Alt+RMB orbit)"),
+    Preferences::CameraNavigationScheme_TrenchBroom);
+  m_navigationSchemeCombo->addItem(
+    tr("Maya / Viewport 2 (3D: Alt+LMB orbit, Alt+MMB pan, Alt+RMB dolly; 2D: Alt+RMB zoom)"),
+    Preferences::CameraNavigationScheme_Maya);
+
   m_lookSpeedSlider = new SliderWithLabel{1, 100};
   m_lookSpeedSlider->setMaximumWidth(400);
   m_invertLookHAxisCheckBox = new QCheckBox{"Invert X axis"};
@@ -111,6 +120,9 @@ void MousePreferencePane::createGui()
   // override the default to make the sliders take up maximum width
   layout->setFieldGrowthPolicy(QFormLayout::ExpandingFieldsGrow);
 
+  layout->addSection(tr("3D camera navigation"));
+  layout->addRow(tr("Mouse scheme"), m_navigationSchemeCombo);
+
   layout->addSection("Mouse Look");
   layout->addRow("Sensitivity", m_lookSpeedSlider);
   layout->addRow("", m_invertLookHAxisCheckBox);
@@ -149,8 +161,9 @@ void MousePreferencePane::createGui()
   layout->addRow(
     "",
     setInfoStyle(
-      new QLabel{"Turn mouse wheel while holding right mouse button in 3D view to "
-                 "adjust speed on the fly."}));
+      new QLabel{tr("TrenchBroom: wheel while holding right mouse (no Alt) adjusts fly "
+                     "speed during look. Maya: same gesture (no Alt) adjusts fly speed; "
+                     "Alt+right drag dollies.")}));
 
   createScrollableContent(layout);
 }
@@ -251,6 +264,12 @@ void MousePreferencePane::bindEvents()
     &SliderWithLabel::valueChanged,
     this,
     &MousePreferencePane::flyMoveSpeedChanged);
+
+  connect(
+    m_navigationSchemeCombo,
+    QOverload<int>::of(&QComboBox::currentIndexChanged),
+    this,
+    &MousePreferencePane::navigationSchemeChanged);
 }
 
 bool MousePreferencePane::canResetToDefaults()
@@ -261,6 +280,8 @@ bool MousePreferencePane::canResetToDefaults()
 void MousePreferencePane::doResetToDefaults()
 {
   auto& prefs = PreferenceManager::instance();
+  prefs.resetToDefault(Preferences::CameraNavigationScheme);
+
   prefs.resetToDefault(Preferences::CameraLookSpeed);
   prefs.resetToDefault(Preferences::CameraLookInvertH);
   prefs.resetToDefault(Preferences::CameraLookInvertV);
@@ -310,6 +331,8 @@ void MousePreferencePane::updateControls()
 
   auto flyMoveSpeedBlocker = QSignalBlocker{m_flyMoveSpeedSlider};
 
+  auto navigationSchemeBlocker = QSignalBlocker{m_navigationSchemeCombo};
+
   auto& prefs = PreferenceManager::instance();
 
   m_lookSpeedSlider->setRatio(prefs.getPendingValue(Preferences::CameraLookSpeed));
@@ -346,6 +369,12 @@ void MousePreferencePane::updateControls()
   m_flyMoveSpeedSlider->setRatio(
     prefs.getPendingValue(Preferences::CameraFlyMoveSpeed)
     / Preferences::MaxCameraFlyMoveSpeed);
+
+  {
+    const auto scheme = prefs.getPendingValue(Preferences::CameraNavigationScheme);
+    const auto idx = m_navigationSchemeCombo->findData(scheme);
+    m_navigationSchemeCombo->setCurrentIndex(idx >= 0 ? idx : 0);
+  }
 
   updateConflicts();
 }
@@ -485,6 +514,13 @@ void MousePreferencePane::flyMoveSpeedChanged(const int /* value */)
   const auto ratio = Preferences::MaxCameraFlyMoveSpeed * m_flyMoveSpeedSlider->ratio();
   auto& prefs = PreferenceManager::instance();
   prefs.set(Preferences::CameraFlyMoveSpeed, ratio);
+}
+
+void MousePreferencePane::navigationSchemeChanged(const int index)
+{
+  const auto scheme = m_navigationSchemeCombo->itemData(index).toInt();
+  auto& prefs = PreferenceManager::instance();
+  prefs.set(Preferences::CameraNavigationScheme, scheme);
 }
 
 namespace

@@ -62,5 +62,15 @@ target_link_libraries(TbGlLib
     VmLib
 )
 
+# Linux + vcpkg static FreeImage: TbMdlLib supplies a LINK_GROUP cluster earlier on the
+# link line; TbGlLib still needs libFreeImage.a after this archive (see editor CMakeLists).
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  target_link_libraries(
+    TbGlLib
+    PUBLIC
+      "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/lib/libFreeImage.a"
+  )
+endif()
+
 add_subdirectory(test)
 add_subdirectory(test-utils)

@@ -104,9 +104,26 @@ find_package(miniz CONFIG REQUIRED)
 find_package(tinyxml2 CONFIG REQUIRED)
 find_package(stduuid REQUIRED)
 
+# vcpkg static FreeImage on Linux: CMake+Ninja does not propagate IMPORTED
+# INTERFACE_LINK_LIBRARIES through static libraries. Re-export the transitive
+# .a set as an INTERFACE target and link it PUBLIC from TbMdlLib on Linux.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  set(_NACHT_TB_VCPKG_LIB "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/lib")
+  add_library(nacht_tb_vcpkg_freeimage_deps INTERFACE)
+  # Single rescanned group: satisfies libTbGlLib.a after libFreeImage.a on the final
+  # link line and pulls WebP/OpenJPEG/TIFF/OpenEXR/etc. in one cluster.
+  target_link_libraries(
+    nacht_tb_vcpkg_freeimage_deps
+    INTERFACE
+      "$<LINK_GROUP:RESCAN,${_NACHT_TB_VCPKG_LIB}/libFreeImage.a,${_NACHT_TB_VCPKG_LIB}/libwebpdecoder.a,${_NACHT_TB_VCPKG_LIB}/libwebpdemux.a,${_NACHT_TB_VCPKG_LIB}/libwebpmux.a,${_NACHT_TB_VCPKG_LIB}/libwebp.a,${_NACHT_TB_VCPKG_LIB}/libsharpyuv.a,${_NACHT_TB_VCPKG_LIB}/libopenjp2.a,${_NACHT_TB_VCPKG_LIB}/libtiff.a,${_NACHT_TB_VCPKG_LIB}/liblzma.a,${_NACHT_TB_VCPKG_LIB}/libjpeg.a,${_NACHT_TB_VCPKG_LIB}/libjasper.a,${_NACHT_TB_VCPKG_LIB}/libjxrglue.a,${_NACHT_TB_VCPKG_LIB}/libjpegxr.a,${_NACHT_TB_VCPKG_LIB}/manual-link/libraw.a,${_NACHT_TB_VCPKG_LIB}/liblcms2.a,${_NACHT_TB_VCPKG_LIB}/libOpenEXRUtil-3_3.a,${_NACHT_TB_VCPKG_LIB}/libOpenEXR-3_3.a,${_NACHT_TB_VCPKG_LIB}/libOpenEXRCore-3_3.a,${_NACHT_TB_VCPKG_LIB}/libIlmThread-3_3.a,${_NACHT_TB_VCPKG_LIB}/libIex-3_3.a,${_NACHT_TB_VCPKG_LIB}/libImath-3_2.a,${_NACHT_TB_VCPKG_LIB}/libdeflate.a,${_NACHT_TB_VCPKG_LIB}/libz.a,m>"
+  )
+endif()
+
+include(cmake/NachtFreeUsd.cmake)
+
 # Find Qt and OpenGL
 find_package(OpenGL REQUIRED)
-find_package(Qt6 COMPONENTS Core Widgets OpenGL OpenGLWidgets Network Svg Test REQUIRED)
+find_package(Qt6 COMPONENTS Core Widgets OpenGL OpenGLWidgets Network Svg Test WebSockets REQUIRED)
 
 # Find threads lib, needed to work around a gtest bug, see: https://stackoverflow.com/questions/21116622/undefined-reference-to-pthread-key-create-linker-error
 # The googletest target links to this

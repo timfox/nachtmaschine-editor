@@ -18,3 +18,16 @@ target_link_libraries(TbGlLibTest
     TbGlLib
     TbGlTestUtilsLib
 )
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  target_include_directories(
+    TbGlLibTest
+    PRIVATE
+      "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/include"
+  )
+  target_link_libraries(
+    TbGlLibTest
+    PRIVATE
+      nacht_tb_vcpkg_freeimage_deps
+  )
+endif()

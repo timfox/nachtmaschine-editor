@@ -88,6 +88,7 @@ target_sources(TbMdlLib
     ${CMAKE_CURRENT_SOURCE_DIR}/src/LoadEntityDefinitions.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/LoadEntityModel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/LoadFmModel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/LoadFreeUsdModel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/LoadFreeImageTexture.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/LoadImageSpriteModel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/LoadM8Texture.cpp
@@ -202,22 +203,53 @@ target_sources(TbMdlLib
     BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_link_libraries(TbMdlLib
-  PRIVATE
-    CompilerConfig
-    PrecompileStdHeaders
-    assimp::assimp
-    freeimage::FreeImage
-    miniz::miniz
-    tinyxml2::tinyxml2
-  PUBLIC
-    fmt::fmt-header-only
-    KdLib
-    TbBaseLib
-    TbElLib
-    TbFsLib
-    TbGlLib
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  target_include_directories(
+    TbMdlLib
+    PRIVATE
+      "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/include"
   )
+  target_link_libraries(
+    TbMdlLib
+    PRIVATE
+      CompilerConfig
+      PrecompileStdHeaders
+      assimp::assimp
+      miniz::miniz
+      tinyxml2::tinyxml2
+    PUBLIC
+      fmt::fmt-header-only
+      KdLib
+      TbBaseLib
+      TbElLib
+      TbFsLib
+      TbGlLib
+      nacht_tb_vcpkg_freeimage_deps
+  )
+else()
+  target_link_libraries(
+    TbMdlLib
+    PRIVATE
+      CompilerConfig
+      PrecompileStdHeaders
+      assimp::assimp
+      freeimage::FreeImage
+      miniz::miniz
+      tinyxml2::tinyxml2
+    PUBLIC
+      fmt::fmt-header-only
+      KdLib
+      TbBaseLib
+      TbElLib
+      TbFsLib
+      TbGlLib
+  )
+endif()
+
+if(NACHT_EDITOR_WITH_FREEUSD)
+  target_compile_definitions(TbMdlLib PRIVATE TB_HAS_FREEUSD=1)
+  target_link_libraries(TbMdlLib PRIVATE freeusd::runtime)
+endif()
 
 add_subdirectory(test)
 add_subdirectory(test-utils)

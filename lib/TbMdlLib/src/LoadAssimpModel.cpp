@@ -844,6 +844,7 @@ bool canLoadAssimpModel(const std::filesystem::path& path)
     // Quake model formats have been omitted since Trenchbroom's got its own parsers
     // already.
     ".3mf",  ".dae",      ".xml",          ".blend",    ".bvh",       ".3ds",  ".ase",
+    ".ma",
     ".lwo",  ".lws",      ".md5mesh",      ".md5anim",  ".md5camera", // Lightwave and Doom 3 formats
     ".gltf", ".fbx",      ".glb",          ".ply",      ".dxf",       ".ifc",  ".iqm",
     ".nff",  ".smd",      ".vta", // .smd and .vta are uncompiled Source engine models.

@@ -63,6 +63,7 @@ target_sources(TbUiLib
     ${CMAKE_CURRENT_SOURCE_DIR}/src/DrawShapeToolExtensions.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/DrawShapeToolPage.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/DropTracker.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/EditorWebSocketService.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/EdgeTool.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/EdgeToolController.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ElidedLabel.cpp
@@ -291,6 +292,7 @@ target_sources(TbUiLib
     ${CMAKE_CURRENT_SOURCE_DIR}/include/ui/DrawShapeToolExtensions.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/ui/DrawShapeToolPage.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/ui/DropTracker.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/ui/EditorWebSocketService.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/ui/EdgeTool.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/ui/EdgeToolController.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/ui/ElidedLabel.h
@@ -470,6 +472,7 @@ target_link_libraries(TbUiLib
     PrecompileStdHeaders
     cpptrace::cpptrace
     Qt6::Svg
+    Qt6::WebSockets
   PUBLIC
     KdLib
     Qt6::Network

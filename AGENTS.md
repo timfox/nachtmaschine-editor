@@ -3,9 +3,11 @@
 ## Project structure
 - The project contains several applications under /app. The main application target is TrenchBroom.
 - Most code lives in libraries under /lib.
+- **Nachtmaschine engine material extensions** (e.g. SPOM in `.mtr` files) are documented for authors in **`docs/Materials-SPOM.md`**; the runtime implementation lives in the parent **Nachtmaschine** game repository, not in this editor’s C++ tree.
 - Each application target and library target has its own CMakeLists.txt file.
 - Shared CMake utilities are in /cmake.
 - Each library usually has a <Name>LibTest target for its tests, for example TbMdlLibTest.
+- **Default input (Maya-oriented fork):** 3D camera defaults to **Alt+LMB / Alt+MMB / Alt+RMB** (`Preferences::CameraNavigationScheme`, **Preferences → Mouse → Mouse scheme**). 2D views use the same scheme where **Alt+RMB** is zoom-drag and **Alt+MMB** pans when “Alt + middle mouse drag to move camera” is on; **RMB** still pans without Alt. Tool keys default to **Q** (deactivate), **E/R** (rotate/scale), **F** (focus selection), **Shift+E/F/G** for edge/face/shear; fly **up** defaults to **Z** so **Q** is free.
 - Some libraries also have a <Name>TestUtilsLib target for shared test helpers, and some of those have a matching <Name>TestUtilsLibTest target.
 
 ## Build and test

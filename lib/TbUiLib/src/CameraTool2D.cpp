@@ -30,6 +30,11 @@ namespace tb::ui
 namespace
 {
 
+bool navigationMaya()
+{
+  return pref(Preferences::CameraNavigationScheme) == Preferences::CameraNavigationScheme_Maya;
+}
+
 bool shouldZoom(const InputState& inputState)
 {
   return (
@@ -105,6 +110,15 @@ public:
 
 bool shouldPan(const InputState& inputState)
 {
+  if (navigationMaya())
+  {
+    return (inputState.mouseButtonsPressed(MouseButtons::Right)
+            && !inputState.modifierKeysDown(ModifierKeys::Alt))
+           || (inputState.mouseButtonsPressed(MouseButtons::Middle)
+               && inputState.modifierKeysPressed(ModifierKeys::Alt))
+           || (inputState.mouseButtonsPressed(MouseButtons::Middle)
+               && !pref(Preferences::CameraEnableAltMove));
+  }
   return (
     inputState.mouseButtonsPressed(MouseButtons::Right)
     || (inputState.mouseButtonsPressed(MouseButtons::Middle) && !pref(Preferences::CameraEnableAltMove)));
@@ -112,6 +126,11 @@ bool shouldPan(const InputState& inputState)
 
 bool shouldDragZoom(const InputState& inputState)
 {
+  if (navigationMaya())
+  {
+    return inputState.mouseButtonsPressed(MouseButtons::Right)
+           && inputState.modifierKeysPressed(ModifierKeys::Alt);
+  }
   return (
     pref(Preferences::CameraEnableAltMove)
     && inputState.mouseButtonsPressed(MouseButtons::Middle)

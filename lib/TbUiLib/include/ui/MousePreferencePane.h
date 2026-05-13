@@ -22,6 +22,7 @@
 #include "ui/PreferencePane.h"
 
 class QCheckBox;
+class QComboBox;
 class QKeySequence;
 class QLabel;
 
@@ -33,6 +34,8 @@ class SliderWithLabel;
 class MousePreferencePane : public PreferencePane
 {
 private:
+  QComboBox* m_navigationSchemeCombo = nullptr;
+
   SliderWithLabel* m_lookSpeedSlider = nullptr;
   QCheckBox* m_invertLookHAxisCheckBox = nullptr;
   QCheckBox* m_invertLookVAxisCheckBox = nullptr;
@@ -95,6 +98,8 @@ private slots:
   void downKeyChanged();
 
   void flyMoveSpeedChanged(int value);
+
+  void navigationSchemeChanged(int index);
 
 private:
   void updateConflicts();

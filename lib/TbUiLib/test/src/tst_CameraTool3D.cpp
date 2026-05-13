@@ -37,6 +37,10 @@ TEST_CASE("CameraTool3D")
 {
   using namespace Catch::Matchers;
 
+  auto& prefs = PreferenceManager::instance();
+  prefs.resetToDefault(Preferences::CameraFlyMoveSpeed);
+  prefs.set(Preferences::CameraNavigationScheme, Preferences::CameraNavigationScheme_TrenchBroom);
+
   auto camera = gl::PerspectiveCamera{};
   auto cameraTool = CameraTool3D{camera};
   auto inputState = InputState{};
@@ -146,6 +150,66 @@ TEST_CASE("CameraTool3D")
     tracker->mouseScroll(inputState);
     CHECK(camera.direction() == vm::vec3f{1, 0, 0});
     CHECK(camera.position() == vm::vec3f{0, 0, 0});
+    CHECK(pref(Preferences::CameraFlyMoveSpeed) == 0.625f);
+  }
+
+  SECTION("Maya navigation: Alt+left orbits like legacy Alt+right")
+  {
+    prefs.set(Preferences::CameraNavigationScheme, Preferences::CameraNavigationScheme_Maya);
+
+    REQUIRE(camera.direction() == vm::vec3f{1, 0, 0});
+    REQUIRE(camera.position() == vm::vec3f{0, 0, 0});
+
+    inputState.setPickRequest({vm::ray3d{{0, 0, 0}, {1, 0, 0}}, camera});
+    inputState.setModifierKeys(ModifierKeys::Alt);
+    inputState.mouseDown(MouseButtons::Left);
+    inputState.mouseMove(100, 0, 100, 0);
+
+    auto tracker = cameraTool.acceptMouseDrag(inputState);
+    REQUIRE(tracker != nullptr);
+
+    tracker->update(inputState);
+    CHECK(camera.direction() == vm::approx{vm::vec3f{0.54f, -0.84f, 0.0f}, 0.01f});
+    CHECK(camera.position() == vm::approx{vm::vec3f{117.68f, 215.41f, 0.0f}, 0.01f});
+  }
+
+  SECTION("Maya navigation: middle mouse alone does not pan")
+  {
+    prefs.set(Preferences::CameraNavigationScheme, Preferences::CameraNavigationScheme_Maya);
+
+    inputState.mouseDown(MouseButtons::Middle);
+    inputState.mouseMove(100, 0, 100, 0);
+
+    CHECK(cameraTool.acceptMouseDrag(inputState) == nullptr);
+  }
+
+  SECTION("Maya navigation: Alt+middle pans horizontally")
+  {
+    prefs.set(Preferences::CameraNavigationScheme, Preferences::CameraNavigationScheme_Maya);
+
+    REQUIRE(camera.direction() == vm::vec3f{1, 0, 0});
+    REQUIRE(camera.position() == vm::vec3f{0, 0, 0});
+
+    inputState.setModifierKeys(ModifierKeys::Alt);
+    inputState.mouseDown(MouseButtons::Middle);
+    inputState.mouseMove(100, 0, 100, 0);
+
+    auto tracker = cameraTool.acceptMouseDrag(inputState);
+    REQUIRE(tracker != nullptr);
+    tracker->update(inputState);
+    CHECK(camera.direction() == vm::vec3f{1, 0, 0});
+    CHECK(camera.position() == vm::vec3f{0, -50, 0});
+  }
+
+  SECTION("Maya navigation: fly speed wheel with right mouse, no Alt")
+  {
+    prefs.set(Preferences::CameraNavigationScheme, Preferences::CameraNavigationScheme_Maya);
+    REQUIRE(pref(Preferences::CameraFlyMoveSpeed) == 0.5f);
+
+    inputState.mouseDown(MouseButtons::Right);
+    inputState.scroll(ScrollSource::Mouse, 0.0f, 5.0f);
+    cameraTool.mouseScroll(inputState);
+
     CHECK(pref(Preferences::CameraFlyMoveSpeed) == 0.625f);
   }
 

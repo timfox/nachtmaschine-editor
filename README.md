@@ -3,6 +3,8 @@
 This editor is a modern cross-platform 3d level editor.
 
 ## Features
+* **Nachtmaschine engine materials**
+	- PBR **SPOM** (Silhouette Parallax Occlusion Mapping) is documented for `.mtr` authors in [`docs/Materials-SPOM.md`](docs/Materials-SPOM.md) (displacement in RMAO alpha, `spom` / `spomHeight` / `spomSteps` / `spomSilhouette` keywords).
 * **General**
 	- Full support for editing in 3D and in up to three 2D views
 	- High performance renderer with support for huge maps

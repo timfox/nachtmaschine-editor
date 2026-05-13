@@ -1,0 +1,99 @@
+/*
+===========================================================================
+Copyright (C) 2026 Gopex LLC. All rights reserved.
+===========================================================================
+*/
+
+// skeleton/maps/skeleton.map
+//
+// Smallest sealed Valve220 map this engine can dmap and load.
+// One 512x512x256 room formed by six axis-aligned slab brushes
+// (floor, ceiling, four walls), one info_player_start, one light.
+//
+// All brushes use textures/common/caulk so the dmap pass treats the
+// room as a sealed structural area without doing any visual work.
+// Replace caulk on the inner faces with your own materials once the
+// engine is up and rendering.
+//
+// Coordinate convention (id Tech): +Z is up, units are inches/world
+// units. Three plane points per face are listed so that
+//   normal = (p1 - p2) x (p3 - p2)
+// faces OUTWARD from the brush, matching what idPlane::FromPoints
+// expects in src/idlib/math/Plane.h.
+
+// entity 0 — worldspawn
+{
+"classname" "worldspawn"
+// floor: x [-256,256] y [-256,256] z [-16,0]
+{
+( 256 -256 -16 ) ( 256 -256 0 ) ( 256 256 0 ) common/caulk [ 0 1 0 0 ] [ 0 0 -1 0 ] 0 0.5 0.5
+( -256 256 -16 ) ( -256 256 0 ) ( -256 -256 0 ) common/caulk [ 0 1 0 0 ] [ 0 0 -1 0 ] 0 0.5 0.5
+( 256 256 -16 ) ( 256 256 0 ) ( -256 256 0 ) common/caulk [ 1 0 0 0 ] [ 0 0 -1 0 ] 0 0.5 0.5
+( -256 -256 -16 ) ( -256 -256 0 ) ( 256 -256 0 ) common/caulk [ 1 0 0 0 ] [ 0 0 -1 0 ] 0 0.5 0.5
+( -256 -256 0 ) ( -256 256 0 ) ( 256 256 0 ) common/caulk [ 1 0 0 0 ] [ 0 -1 0 0 ] 0 0.5 0.5
+( 256 -256 -16 ) ( 256 256 -16 ) ( -256 256 -16 ) common/caulk [ 1 0 0 0 ] [ 0 -1 0 0 ] 0 0.5 0.5
+}
+// ceiling: x [-256,256] y [-256,256] z [256,272]
+{
+( 256 -256 256 ) ( 256 -256 272 ) ( 256 256 272 ) common/caulk [ 0 1 0 0 ] [ 0 0 -1 0 ] 0 0.5 0.5
+( -256 256 256 ) ( -256 256 272 ) ( -256 -256 272 ) common/caulk [ 0 1 0 0 ] [ 0 0 -1 0 ] 0 0.5 0.5
+( 256 256 256 ) ( 256 256 272 ) ( -256 256 272 ) common/caulk [ 1 0 0 0 ] [ 0 0 -1 0 ] 0 0.5 0.5
+( -256 -256 256 ) ( -256 -256 272 ) ( 256 -256 272 ) common/caulk [ 1 0 0 0 ] [ 0 0 -1 0 ] 0 0.5 0.5
+( -256 -256 272 ) ( -256 256 272 ) ( 256 256 272 ) common/caulk [ 1 0 0 0 ] [ 0 -1 0 0 ] 0 0.5 0.5
+( 256 -256 256 ) ( 256 256 256 ) ( -256 256 256 ) common/caulk [ 1 0 0 0 ] [ 0 -1 0 0 ] 0 0.5 0.5
+}
+// north wall: x [-256,256] y [256,272] z [0,256]
+{
+( 256 256 0 ) ( 256 256 256 ) ( 256 272 256 ) common/caulk [ 0 1 0 0 ] [ 0 0 -1 0 ] 0 0.5 0.5
+( -256 272 0 ) ( -256 272 256 ) ( -256 256 256 ) common/caulk [ 0 1 0 0 ] [ 0 0 -1 0 ] 0 0.5 0.5
+( 256 272 0 ) ( 256 272 256 ) ( -256 272 256 ) common/caulk [ 1 0 0 0 ] [ 0 0 -1 0 ] 0 0.5 0.5
+( -256 256 0 ) ( -256 256 256 ) ( 256 256 256 ) common/caulk [ 1 0 0 0 ] [ 0 0 -1 0 ] 0 0.5 0.5
+( -256 256 256 ) ( -256 272 256 ) ( 256 272 256 ) common/caulk [ 1 0 0 0 ] [ 0 -1 0 0 ] 0 0.5 0.5
+( 256 256 0 ) ( 256 272 0 ) ( -256 272 0 ) common/caulk [ 1 0 0 0 ] [ 0 -1 0 0 ] 0 0.5 0.5
+}
+// south wall: x [-256,256] y [-272,-256] z [0,256]
+{
+( 256 -272 0 ) ( 256 -272 256 ) ( 256 -256 256 ) common/caulk [ 0 1 0 0 ] [ 0 0 -1 0 ] 0 0.5 0.5
+( -256 -256 0 ) ( -256 -256 256 ) ( -256 -272 256 ) common/caulk [ 0 1 0 0 ] [ 0 0 -1 0 ] 0 0.5 0.5
+( 256 -256 0 ) ( 256 -256 256 ) ( -256 -256 256 ) common/caulk [ 1 0 0 0 ] [ 0 0 -1 0 ] 0 0.5 0.5
+( -256 -272 0 ) ( -256 -272 256 ) ( 256 -272 256 ) common/caulk [ 1 0 0 0 ] [ 0 0 -1 0 ] 0 0.5 0.5
+( -256 -272 256 ) ( -256 -256 256 ) ( 256 -256 256 ) common/caulk [ 1 0 0 0 ] [ 0 -1 0 0 ] 0 0.5 0.5
+( 256 -272 0 ) ( 256 -256 0 ) ( -256 -256 0 ) common/caulk [ 1 0 0 0 ] [ 0 -1 0 0 ] 0 0.5 0.5
+}
+// east wall: x [256,272] y [-256,256] z [0,256]
+{
+( 272 -256 0 ) ( 272 -256 256 ) ( 272 256 256 ) common/caulk [ 0 1 0 0 ] [ 0 0 -1 0 ] 0 0.5 0.5
+( 256 256 0 ) ( 256 256 256 ) ( 256 -256 256 ) common/caulk [ 0 1 0 0 ] [ 0 0 -1 0 ] 0 0.5 0.5
+( 272 256 0 ) ( 272 256 256 ) ( 256 256 256 ) common/caulk [ 1 0 0 0 ] [ 0 0 -1 0 ] 0 0.5 0.5
+( 256 -256 0 ) ( 256 -256 256 ) ( 272 -256 256 ) common/caulk [ 1 0 0 0 ] [ 0 0 -1 0 ] 0 0.5 0.5
+( 256 -256 256 ) ( 256 256 256 ) ( 272 256 256 ) common/caulk [ 1 0 0 0 ] [ 0 -1 0 0 ] 0 0.5 0.5
+( 272 -256 0 ) ( 272 256 0 ) ( 256 256 0 ) common/caulk [ 1 0 0 0 ] [ 0 -1 0 0 ] 0 0.5 0.5
+}
+// west wall: x [-272,-256] y [-256,256] z [0,256]
+{
+( -256 -256 0 ) ( -256 -256 256 ) ( -256 256 256 ) common/caulk [ 0 1 0 0 ] [ 0 0 -1 0 ] 0 0.5 0.5
+( -272 256 0 ) ( -272 256 256 ) ( -272 -256 256 ) common/caulk [ 0 1 0 0 ] [ 0 0 -1 0 ] 0 0.5 0.5
+( -256 256 0 ) ( -256 256 256 ) ( -272 256 256 ) common/caulk [ 1 0 0 0 ] [ 0 0 -1 0 ] 0 0.5 0.5
+( -272 -256 0 ) ( -272 -256 256 ) ( -256 -256 256 ) common/caulk [ 1 0 0 0 ] [ 0 0 -1 0 ] 0 0.5 0.5
+( -272 -256 256 ) ( -272 256 256 ) ( -256 256 256 ) common/caulk [ 1 0 0 0 ] [ 0 -1 0 0 ] 0 0.5 0.5
+( -256 -256 0 ) ( -256 256 0 ) ( -272 256 0 ) common/caulk [ 1 0 0 0 ] [ 0 -1 0 0 ] 0 0.5 0.5
+}
+}
+// entity 1 — player spawn
+{
+"classname" "info_player_start"
+"name" "info_player_start_1"
+"origin" "0 0 8"
+"angle" "0"
+}
+// entity 2 — single ambient light filling the room
+{
+"classname" "light"
+"name" "light_1"
+"origin" "0 0 200"
+"_color" "1.0 1.0 1.0"
+"light_radius" "384 384 384"
+"nodiffuse" "0"
+"nospecular" "0"
+"noshadows" "1"
+}

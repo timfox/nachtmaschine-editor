@@ -31,6 +31,8 @@
 #include <QSurfaceFormat>
 #include <QtGlobal>
 
+#include <cstdlib>
+
 #include "PreferenceManager.h"
 #include "Preferences.h"
 #include "ui/Action.h"
@@ -39,6 +41,7 @@
 #include "ui/AppController.h"
 #include "ui/Contracts.h"
 #include "ui/CrashReporter.h"
+#include "ui/EditorWebSocketService.h"
 #include "ui/FileEventFilter.h"
 #include "ui/MapWindowManager.h"
 #include "ui/QPathUtils.h"
@@ -229,11 +232,45 @@ bool openFiles(AppController& appController, const QStringList& fileNames)
   return anyDocumentOpened;
 }
 
+void startEditorWebSocketIfRequested(const QCommandLineParser& parser)
+{
+  auto port = quint16{0};
+  if (parser.isSet(QStringLiteral("editor-ws-port")))
+  {
+    auto ok = false;
+    const auto p = parser.value(QStringLiteral("editor-ws-port")).toUInt(&ok);
+    if (ok && p > 0u && p <= 65535u)
+    {
+      port = static_cast<quint16>(p);
+    }
+  }
+  if (port == 0)
+  {
+    if (const char* s = std::getenv("NACHT_TB_WEBSOCKET_PORT"))
+    {
+      char* end = nullptr;
+      const auto v = std::strtol(s, &end, 10);
+      if (end != s && *end == '\0' && v > 0 && v <= 65535)
+      {
+        port = static_cast<quint16>(v);
+      }
+    }
+  }
+  if (port != 0)
+  {
+    new EditorWebSocketService{port, qApp};
+  }
+}
+
 bool parseCommandLineAndOpenFiles(AppController& appController)
 {
   auto parser = QCommandLineParser{};
   parser.addOption(QCommandLineOption("portable"));
   parser.addOption(QCommandLineOption("enableDraftReleaseUpdates"));
+  parser.addOption(QCommandLineOption{
+    QStringList{QStringLiteral("editor-ws-port")},
+    QStringLiteral("Listen on 127.0.0.1 for WebSocket clients (experimental JSON protocol)."),
+    QStringLiteral("port")});
   parser.process(*qApp);
 
   if (parser.isSet("enableDraftReleaseUpdates"))
@@ -243,6 +280,8 @@ bool parseCommandLineAndOpenFiles(AppController& appController)
     prefs.set(Preferences::IncludeDraftReleaseUpdates, true);
     prefs.saveChanges();
   }
+
+  startEditorWebSocketIfRequested(parser);
 
   return openFiles(appController, parser.positionalArguments());
 }

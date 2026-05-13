@@ -29,6 +29,7 @@
 #include "mdl/LoadBspModel.h"
 #include "mdl/LoadDkmModel.h"
 #include "mdl/LoadFmModel.h"
+#include "mdl/LoadFreeUsdModel.h"
 #include "mdl/LoadImageSpriteModel.h"
 #include "mdl/LoadMd2Model.h"
 #include "mdl/LoadMd3Model.h"
@@ -113,6 +114,10 @@ Result<EntityModelData> loadEntityModelData(
            if (canLoadImageSpriteModel(path))
            {
              return loadImageSpriteModel(modelName, reader, fs, logger);
+           }
+           if (canLoadFreeUsdModel(path))
+           {
+             return loadFreeUsdModel(path, fs, logger);
            }
            if (canLoadAssimpModel(path))
            {
