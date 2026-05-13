@@ -11,6 +11,8 @@
 - Some libraries also have a <Name>TestUtilsLib target for shared test helpers, and some of those have a matching <Name>TestUtilsLibTest target.
 
 ## Build and test
+- **CI (parent repo):** GitHub Actions job **`Linux editor (TbMdlLib + TbUiLib)`** configures **`editor/`** with **`NACHT_EDITOR_WITH_FREEUSD=OFF`** (no FreeUSD fetch) and builds **`TbMdlLib`** + **`TbUiLib`** to guard Qt6 / WebSockets / model-loader changes. That job caches **`editor/vcpkg/downloads`** and **`editor-build-ci/vcpkg_installed`** (keyed on **`editor/vcpkg.json`**) to speed repeat CI runs.
+- **Nacht fork extras:** CMake requires **Qt6 Svg** and **Qt6 WebSockets**. On Debian/Ubuntu install **`libqt6svg6-dev`** and **`qt6-websockets-dev`** (names may vary). If CMake still cannot find a module, pass **`Qt6Svg_DIR`** / **`Qt6WebSockets_DIR`** (see **`editor/scripts/configure-linux-nacht.sh`** env **`QT6SVG_DIR`** / **`QT6WEBSOCKETS_DIR`**). Optional **FreeUSD** for USD (`.usd` / `.usda` / `.usdc`) entity previews is controlled by **`NACHT_EDITOR_WITH_FREEUSD`** (default ON; fetches [freeusd](https://github.com/gopexllc/freeusd) at configure time — needs network once). **`bash editor/scripts/configure-linux-nacht.sh`** passes **`NACHT_EDITOR_WITH_FREEUSD=ON`** by default; set **`NACHT_EDITOR_WITH_FREEUSD=0`** to disable. After configure, the editor listens for automation WebSockets only when started with **`--editor-ws-port <port>`** or **`NACHT_TB_WEBSOCKET_PORT`** (see `app/TrenchBroom/src/Main.cpp`).
 - TrenchBroom uses CMake as its build system.
 - In Visual Studio Code, prefer CMake Tools for builds.
 - Build the narrowest relevant target instead of building the whole workspace when possible.
