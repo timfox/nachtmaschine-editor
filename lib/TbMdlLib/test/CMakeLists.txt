@@ -42,6 +42,7 @@ target_sources(TbMdlLibTest PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/src/tst_LoadFreeImageTexture.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/tst_LoadM8Texture.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/tst_LoadM32Texture.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/tst_LoadMayaAsciiScene.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/tst_LoadMaterialCollections.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/tst_LoadMd3Model.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/tst_LoadMdlModel.cpp
@@ -109,6 +110,10 @@ target_link_libraries(TbMdlLibTest
     TbMdlLib
     TbMdlTestUtilsLib
 )
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  target_link_libraries(TbMdlLibTest PRIVATE nacht_tb_vcpkg_freeimage_deps)
+endif()
 
 # Copy fixtures
 set(TEST_FIXTURE_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/fixture)

@@ -19,6 +19,8 @@
 
 #include "ui/IssueBrowser.h"
 
+#include "ui/QtCheckBoxSignals.h"
+
 #include <QCheckBox>
 #include <QList>
 #include <QStringList>
@@ -53,7 +55,7 @@ QWidget* IssueBrowser::createTabBarPage(QWidget* parent)
   m_showHiddenIssuesCheckBox = new QCheckBox{"Show hidden issues"};
   connect(
     m_showHiddenIssuesCheckBox,
-    &QCheckBox::checkStateChanged,
+    CheckBoxStateChanged,
     this,
     &IssueBrowser::showHiddenIssuesChanged);
 

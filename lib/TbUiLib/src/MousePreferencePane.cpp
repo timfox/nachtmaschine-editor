@@ -19,6 +19,8 @@
 
 #include "ui/MousePreferencePane.h"
 
+#include "ui/QtCheckBoxSignals.h"
+
 #include <QCheckBox>
 #include <QComboBox>
 #include <QLabel>
@@ -177,12 +179,12 @@ void MousePreferencePane::bindEvents()
     &MousePreferencePane::lookSpeedChanged);
   connect(
     m_invertLookHAxisCheckBox,
-    &QCheckBox::checkStateChanged,
+    CheckBoxStateChanged,
     this,
     &MousePreferencePane::invertLookHAxisChanged);
   connect(
     m_invertLookVAxisCheckBox,
-    &QCheckBox::checkStateChanged,
+    CheckBoxStateChanged,
     this,
     &MousePreferencePane::invertLookVAxisChanged);
 
@@ -193,12 +195,12 @@ void MousePreferencePane::bindEvents()
     &MousePreferencePane::panSpeedChanged);
   connect(
     m_invertPanHAxisCheckBox,
-    &QCheckBox::checkStateChanged,
+    CheckBoxStateChanged,
     this,
     &MousePreferencePane::invertPanHAxisChanged);
   connect(
     m_invertPanVAxisCheckBox,
-    &QCheckBox::checkStateChanged,
+    CheckBoxStateChanged,
     this,
     &MousePreferencePane::invertPanVAxisChanged);
 
@@ -209,22 +211,22 @@ void MousePreferencePane::bindEvents()
     &MousePreferencePane::moveSpeedChanged);
   connect(
     m_invertMouseWheelCheckBox,
-    &QCheckBox::checkStateChanged,
+    CheckBoxStateChanged,
     this,
     &MousePreferencePane::invertMouseWheelChanged);
   connect(
     m_enableAltMoveCheckBox,
-    &QCheckBox::checkStateChanged,
+    CheckBoxStateChanged,
     this,
     &MousePreferencePane::enableAltMoveChanged);
   connect(
     m_invertAltMoveAxisCheckBox,
-    &QCheckBox::checkStateChanged,
+    CheckBoxStateChanged,
     this,
     &MousePreferencePane::invertAltMoveAxisChanged);
   connect(
     m_moveInCursorDirCheckBox,
-    &QCheckBox::checkStateChanged,
+    CheckBoxStateChanged,
     this,
     &MousePreferencePane::moveInCursorDirChanged);
 

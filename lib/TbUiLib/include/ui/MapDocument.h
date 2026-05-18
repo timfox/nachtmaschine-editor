@@ -89,6 +89,12 @@ struct PortalFile
   std::filesystem::path path;
 };
 
+struct MayaSceneImport
+{
+  std::filesystem::path path;
+  std::vector<mdl::Node*> nodes;
+};
+
 class MapDocument
 {
 public:
@@ -162,6 +168,7 @@ private:
 
   std::optional<PointFile> m_pointFile;
   std::optional<PortalFile> m_portalFile;
+  std::optional<MayaSceneImport> m_mayaSceneImport;
 
   std::optional<std::vector<Action>> m_cachedTagActions;
   std::optional<std::vector<Action>> m_cachedEntityDefinitionActions;
@@ -262,6 +269,13 @@ public: // point file management
   bool canReloadPointFile() const;
   void reloadPointFile();
   void unloadPointFile();
+
+public: // Maya ASCII scene import
+  void importMayaAsciiScene(std::filesystem::path path);
+  bool isMayaSceneImported() const;
+  bool canReloadMayaAsciiScene() const;
+  void reloadMayaAsciiScene();
+  void unloadMayaAsciiScene();
 
 public: // portal file management
   const std::vector<vm::polygon3f>* portals() const;

@@ -7,6 +7,7 @@
 - Each application target and library target has its own CMakeLists.txt file.
 - Shared CMake utilities are in /cmake.
 - Each library usually has a <Name>LibTest target for its tests, for example TbMdlLibTest.
+- **Maya ASCII level import:** **File → Import Maya Scene…** reads `.ma` transform/locator nodes into map entities (`mdl/LoadMayaAsciiScene.*`). Author with `tb_entity_<classname>` or `entity_<classname>` names, optional `tb_class` / `tb_model` string attrs, or mesh children → `misc_model`. Maya Y-up positions are converted to TrenchBroom Z-up.
 - **Default input (Maya-oriented fork):** 3D camera defaults to **Alt+LMB / Alt+MMB / Alt+RMB** (`Preferences::CameraNavigationScheme`, **Preferences → Mouse → Mouse scheme**). 2D views use the same scheme where **Alt+RMB** is zoom-drag and **Alt+MMB** pans when “Alt + middle mouse drag to move camera” is on; **RMB** still pans without Alt. Tool keys default to **Q** (deactivate), **E/R** (rotate/scale), **F** (focus selection), **Shift+E/F/G** for edge/face/shear; fly **up** defaults to **Z** so **Q** is free.
 - Some libraries also have a <Name>TestUtilsLib target for shared test helpers, and some of those have a matching <Name>TestUtilsLibTest target.
 
