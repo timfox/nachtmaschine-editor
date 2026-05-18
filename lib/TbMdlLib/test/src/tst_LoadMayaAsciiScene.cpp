@@ -18,6 +18,7 @@
  */
 
 #include "mdl/CatchConfig.h"
+#include "mdl/BrushNode.h"
 #include "mdl/EntityNode.h"
 #include "mdl/LoadMayaAsciiScene.h"
 #include "mdl/MapFixture.h"
@@ -89,10 +90,42 @@ TEST_CASE("LoadMayaAsciiScene")
     REQUIRE(nodes.size() == 3);
     transaction.commit();
 
-    const auto hasPlayer = std::any_of(nodes.begin(), nodes.end(), [](const EntityNode* node) {
-      return node->entity().classname() == "info_player_start";
+    const auto hasPlayer = std::any_of(nodes.begin(), nodes.end(), [](const Node* node) {
+      return dynamic_cast<const EntityNode*>(node) != nullptr
+             && dynamic_cast<const EntityNode*>(node)->entity().classname()
+                  == "info_player_start";
     });
     CHECK(hasPlayer);
+  }
+
+  SECTION("roles: triggers, spawns, brush mesh")
+  {
+    const auto rolesPath =
+      std::filesystem::current_path() / "fixture/test/mdl/LoadMayaAsciiScene/level_roles.ma";
+    const auto& spawns = fs::Disk::withInputStream(rolesPath, loadMayaAsciiScene) | kdl::value();
+    REQUIRE(spawns.size() == 3);
+
+    const auto trigger = std::find_if(spawns.begin(), spawns.end(), [](const auto& s) {
+      return s.classname == "trigger_once";
+    });
+    REQUIRE(trigger != spawns.end());
+    CHECK(trigger->kind == MayaAsciiImportKind::Brush);
+    CHECK(trigger->hasBrushBounds);
+
+    const auto spawn = std::find_if(spawns.begin(), spawns.end(), [](const auto& s) {
+      return s.classname == "info_player_deathmatch";
+    });
+    REQUIRE(spawn != spawns.end());
+    CHECK(spawn->kind == MayaAsciiImportKind::Point);
+
+    const auto brush = std::find_if(spawns.begin(), spawns.end(), [](const auto& s) {
+      return s.classname == "func_detail";
+    });
+    REQUIRE(brush != spawns.end());
+    CHECK(brush->kind == MayaAsciiImportKind::Brush);
+    CHECK(brush->hasBrushBounds);
+    const auto size = brush->brushBounds.size();
+    CHECK(size.x() > 50.0);
   }
 
   SECTION("parent command hierarchy")

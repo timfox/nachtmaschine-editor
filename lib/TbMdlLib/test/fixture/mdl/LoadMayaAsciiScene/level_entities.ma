@@ -6,6 +6,6 @@ createNode transform -n "tb_entity_info_player_start";
 createNode transform -n "tb_entity_light";
 	setAttr ".t" -type "double3" 0 64 0 ;
 	setAttr ".tb_class" -type "string" "light";
-createNode transform -n "crate";
+createNode transform -n "tb_model_crate";
 	setAttr ".tb_model" -type "string" "models/props/crate.lwo";
-createNode mesh -n "crateShape" -p "crate";
+createNode mesh -n "crateShape" -p "tb_model_crate";

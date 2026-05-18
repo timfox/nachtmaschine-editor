@@ -19,15 +19,19 @@
 
 #include "mdl/LoadMayaAsciiScene.h"
 
+#include "mdl/BrushBuilder.h"
+#include "mdl/BrushNode.h"
 #include "mdl/Entity.h"
 #include "mdl/EntityNode.h"
 #include "mdl/EntityProperties.h"
 #include "mdl/EntityRotation.h"
 #include "mdl/Map.h"
 #include "mdl/Map_Nodes.h"
+#include "mdl/WorldNode.h"
 #include "kd/k.h"
 #include "kd/path_utils.h"
 
+#include "vm/bbox.h"
 #include "vm/mat_ext.h"
 
 #include <cctype>
@@ -45,6 +49,15 @@ namespace
 {
 
 constexpr std::string_view MayaAsciiMagic = "//Maya ASCII";
+constexpr double DefaultBrushHalfExtent = 16.0;
+
+enum class MayaObjectRole
+{
+  None,
+  PointEntity,
+  ModelEntity,
+  BrushEntity,
+};
 
 struct MayaNode
 {
@@ -52,9 +65,17 @@ struct MayaNode
   std::optional<std::string> parent;
   vm::vec3d translation{0, 0, 0};
   vm::vec3d rotationDeg{0, 0, 0};
+  vm::vec3d scale{1, 1, 1};
   bool hasMeshChild = false;
   bool isLocator = false;
   std::map<std::string, std::string> stringAttrs;
+};
+
+struct MayaMeshShape
+{
+  std::string name;
+  std::optional<std::string> parentTransform;
+  std::vector<vm::vec3d> localVertices;
 };
 
 bool isIgnoredMayaNodeName(const std::string& name)
@@ -98,6 +119,16 @@ std::string trim(std::string_view str)
   return std::string{begin, end};
 }
 
+bool looksLikeNumericContinuation(std::string_view line)
+{
+  if (line.empty())
+  {
+    return false;
+  }
+  const auto c = line.front();
+  return c == '-' || c == '.' || std::isdigit(static_cast<unsigned char>(c));
+}
+
 std::optional<std::string> parseQuotedName(std::string_view line, const std::string_view token)
 {
   const auto pos = line.find(token);
@@ -116,6 +147,23 @@ std::optional<std::string> parseQuotedName(std::string_view line, const std::str
     return std::nullopt;
   }
   return std::string{line.substr(quote + 1, endQuote - quote - 1)};
+}
+
+std::vector<std::string> parseQuotedStrings(std::string_view line)
+{
+  std::vector<std::string> result;
+  auto pos = line.find('"');
+  while (pos != std::string_view::npos)
+  {
+    const auto endQuote = line.find('"', pos + 1);
+    if (endQuote == std::string_view::npos)
+    {
+      break;
+    }
+    result.emplace_back(line.substr(pos + 1, endQuote - pos - 1));
+    pos = line.find('"', endQuote + 1);
+  }
+  return result;
 }
 
 std::optional<vm::vec3d> parseDouble3(std::string_view line)
@@ -143,21 +191,42 @@ std::optional<vm::vec3d> parseDouble3(std::string_view line)
   return vm::vec3d{x, y, z};
 }
 
-std::vector<std::string> parseQuotedStrings(std::string_view line)
+void appendFloat3Vertices(std::string_view line, std::vector<vm::vec3d>& vertices)
 {
-  std::vector<std::string> result;
-  auto pos = line.find('"');
-  while (pos != std::string_view::npos)
+  auto typePos = line.find("-type \"float3\"");
+  if (typePos == std::string_view::npos)
   {
-    const auto endQuote = line.find('"', pos + 1);
-    if (endQuote == std::string_view::npos)
+    typePos = line.find("-type \"double3\"");
+  }
+
+  size_t valuesPos = 0;
+  if (typePos != std::string_view::npos)
+  {
+    valuesPos = line.find_first_of("0123456789.-", typePos + 14);
+  }
+  else
+  {
+    valuesPos = line.find_first_of("0123456789.-");
+  }
+
+  if (valuesPos == std::string_view::npos)
+  {
+    return;
+  }
+
+  std::istringstream stream{std::string{line.substr(valuesPos)}};
+  while (stream)
+  {
+    double x = 0.0;
+    double y = 0.0;
+    double z = 0.0;
+    stream >> x >> y >> z;
+    if (!stream)
     {
       break;
     }
-    result.emplace_back(line.substr(pos + 1, endQuote - pos - 1));
-    pos = line.find('"', endQuote + 1);
+    vertices.emplace_back(x, y, z);
   }
-  return result;
 }
 
 std::optional<std::string> parseStringAttr(std::string_view line)
@@ -182,26 +251,29 @@ std::optional<std::string> parseStringAttr(std::string_view line)
 
 vm::vec3d mayaTranslationToWorld(const vm::vec3d& t)
 {
-  // Maya Y-up → id/TrenchBroom Z-up: (x, y, z)_maya → (x, -z, y)_world
   return vm::vec3d{t.x(), -t.z(), t.y()};
 }
 
-vm::mat4x4d mayaLocalTransform(const vm::vec3d& translation, const vm::vec3d& rotationDeg)
+vm::mat4x4d mayaLocalTransform(
+  const vm::vec3d& translation, const vm::vec3d& rotationDeg, const vm::vec3d& scale)
 {
   const auto t = mayaTranslationToWorld(translation);
+  auto scaleM = vm::mat4x4d::identity();
+  scaleM[0][0] = scale.x();
+  scaleM[1][1] = scale.y();
+  scaleM[2][2] = scale.z();
   const auto rx = vm::to_radians(rotationDeg.x());
   const auto ry = vm::to_radians(rotationDeg.y());
   const auto rz = vm::to_radians(rotationDeg.z());
   const auto rMaya =
     vm::rotation_matrix(vm::vec3d{1, 0, 0}, rx) * vm::rotation_matrix(vm::vec3d{0, 1, 0}, ry)
     * vm::rotation_matrix(vm::vec3d{0, 0, 1}, rz);
-  // Basis change for rotation: B * R * B^-1 with B mapping Maya axes to world axes
   auto B = vm::mat4x4d::identity();
   B[0] = vm::vec4d{1, 0, 0, 0};
   B[1] = vm::vec4d{0, 0, -1, 0};
   B[2] = vm::vec4d{0, 1, 0, 0};
   const auto rWorld = B * rMaya * vm::transpose(B);
-  return vm::translation_matrix(t) * rWorld;
+  return vm::translation_matrix(t) * rWorld * scaleM;
 }
 
 vm::mat4x4d worldTransform(
@@ -222,7 +294,7 @@ vm::mat4x4d worldTransform(
   }
 
   const auto& node = nodeIt->second;
-  const auto local = mayaLocalTransform(node.translation, node.rotationDeg);
+  const auto local = mayaLocalTransform(node.translation, node.rotationDeg, node.scale);
   const auto world = node.parent
                        ? worldTransform(*node.parent, nodes, cache) * local
                        : local;
@@ -249,15 +321,73 @@ std::string stripPrefix(const std::string& str, const std::string& prefix)
   return str;
 }
 
-std::string resolveClassname(const MayaNode& node)
+std::optional<std::string> stringAttr(const MayaNode& node, const std::string& key)
 {
-  const auto classIt = node.stringAttrs.find("tb_class");
-  if (classIt != node.stringAttrs.end() && !classIt->second.empty())
+  const auto it = node.stringAttrs.find(key);
+  if (it != node.stringAttrs.end() && !it->second.empty())
   {
-    return classIt->second;
+    return it->second;
+  }
+  return std::nullopt;
+}
+
+MayaObjectRole resolveObjectRole(const MayaNode& node)
+{
+  if (const auto kind = stringAttr(node, "tb_kind"))
+  {
+    if (*kind == "brush" || *kind == "trigger")
+    {
+      return MayaObjectRole::BrushEntity;
+    }
+    if (*kind == "model")
+    {
+      return MayaObjectRole::ModelEntity;
+    }
+    if (*kind == "entity")
+    {
+      return MayaObjectRole::PointEntity;
+    }
   }
 
-  auto name = node.name;
+  const auto& name = node.name;
+  if (hasPrefix(name, "tb_trigger_") || hasPrefix(name, "tb_brush_"))
+  {
+    return MayaObjectRole::BrushEntity;
+  }
+  if (hasPrefix(name, "tb_model_"))
+  {
+    return MayaObjectRole::ModelEntity;
+  }
+  if (
+    hasPrefix(name, "tb_entity_") || hasPrefix(name, "entity_") || hasPrefix(name, "tb_spawn_")
+    || hasPrefix(name, "tb_locator_"))
+  {
+    return MayaObjectRole::PointEntity;
+  }
+  if (stringAttr(node, "tb_class"))
+  {
+    return MayaObjectRole::PointEntity;
+  }
+  if (stringAttr(node, "tb_model"))
+  {
+    return MayaObjectRole::ModelEntity;
+  }
+  if (node.isLocator && hasPrefix(name, "tb_"))
+  {
+    return MayaObjectRole::PointEntity;
+  }
+
+  return MayaObjectRole::None;
+}
+
+std::string resolveClassname(const MayaNode& node, MayaObjectRole role)
+{
+  if (const auto cls = stringAttr(node, "tb_class"))
+  {
+    return *cls;
+  }
+
+  const auto& name = node.name;
   if (hasPrefix(name, "tb_entity_"))
   {
     return stripPrefix(name, "tb_entity_");
@@ -266,12 +396,38 @@ std::string resolveClassname(const MayaNode& node)
   {
     return stripPrefix(name, "entity_");
   }
-  if (hasPrefix(name, "tb_"))
+  if (hasPrefix(name, "tb_spawn_"))
   {
-    return stripPrefix(name, "tb_");
+    return stripPrefix(name, "tb_spawn_");
+  }
+  if (hasPrefix(name, "tb_locator_"))
+  {
+    return stripPrefix(name, "tb_locator_");
+  }
+  if (hasPrefix(name, "tb_trigger_"))
+  {
+    const auto suffix = stripPrefix(name, "tb_trigger_");
+    if (suffix.empty())
+    {
+      return "trigger_once";
+    }
+    if (hasPrefix(suffix, "trigger_"))
+    {
+      return suffix;
+    }
+    return "trigger_" + suffix;
+  }
+  if (hasPrefix(name, "tb_brush_"))
+  {
+    const auto suffix = stripPrefix(name, "tb_brush_");
+    return suffix.empty() ? "func_static" : suffix;
+  }
+  if (hasPrefix(name, "tb_model_"))
+  {
+    return "misc_model";
   }
 
-  if (node.hasMeshChild || node.isLocator)
+  if (role == MayaObjectRole::ModelEntity)
   {
     return "misc_model";
   }
@@ -279,30 +435,25 @@ std::string resolveClassname(const MayaNode& node)
   return {};
 }
 
-bool shouldImportNode(const MayaNode& node, const std::string& classname)
+bool shouldImportNode(const MayaNode& node, MayaObjectRole role, const std::string& classname)
 {
-  if (classname.empty() || isIgnoredMayaNodeName(node.name))
+  if (role == MayaObjectRole::None || classname.empty() || isIgnoredMayaNodeName(node.name))
   {
     return false;
   }
 
-  if (hasPrefix(node.name, "tb_entity_") || hasPrefix(node.name, "entity_"))
+  if (role == MayaObjectRole::BrushEntity)
   {
     return true;
   }
-  if (node.stringAttrs.contains("tb_class"))
+
+  if (role == MayaObjectRole::ModelEntity)
   {
-    return true;
+    return node.hasMeshChild || stringAttr(node, "tb_model").has_value()
+           || hasPrefix(node.name, "tb_model_");
   }
-  if (node.hasMeshChild)
-  {
-    return true;
-  }
-  if (node.isLocator && hasPrefix(node.name, "tb_"))
-  {
-    return true;
-  }
-  return false;
+
+  return true;
 }
 
 std::string formatAngles(const vm::mat4x4d& worldMatrix)
@@ -313,23 +464,89 @@ std::string formatAngles(const vm::mat4x4d& worldMatrix)
          + kdl::str_to_string(pyr.z());
 }
 
-std::optional<std::string> modelPathForNode(const MayaNode& node)
+std::optional<std::string> modelPathForNode(const MayaNode& node, MayaObjectRole role)
 {
-  const auto modelIt = node.stringAttrs.find("tb_model");
-  if (modelIt != node.stringAttrs.end() && !modelIt->second.empty())
+  if (role != MayaObjectRole::ModelEntity)
   {
-    return modelIt->second;
+    return std::nullopt;
   }
-  const auto modelIt2 = node.stringAttrs.find("model");
-  if (modelIt2 != node.stringAttrs.end() && !modelIt2->second.empty())
+
+  if (const auto modelIt = stringAttr(node, "tb_model"))
   {
-    return modelIt2->second;
+    return modelIt;
   }
-  if (node.hasMeshChild && !node.name.empty())
+  if (const auto modelIt2 = stringAttr(node, "model"))
   {
-    return node.name;
+    return modelIt2;
+  }
+  if (hasPrefix(node.name, "tb_model_"))
+  {
+    const auto path = stripPrefix(node.name, "tb_model_");
+    if (!path.empty())
+    {
+      return path;
+    }
   }
   return std::nullopt;
+}
+
+std::string brushMaterialForNode(const MayaNode& node)
+{
+  if (const auto mat = stringAttr(node, "tb_material"))
+  {
+    return *mat;
+  }
+  if (hasPrefix(node.name, "tb_trigger_"))
+  {
+    return "common/caulk";
+  }
+  return "common/caulk";
+}
+
+std::optional<vm::bbox3d> meshWorldBounds(
+  const std::string& transformName,
+  const vm::mat4x4d& world,
+  const std::unordered_map<std::string, MayaMeshShape>& meshes)
+{
+  auto bounds = vm::bbox3d{};
+  auto any = false;
+
+  for (const auto& [meshName, mesh] : meshes)
+  {
+    (void)meshName;
+    if (mesh.parentTransform != transformName || mesh.localVertices.empty())
+    {
+      continue;
+    }
+
+    for (const auto& local : mesh.localVertices)
+    {
+      const auto worldPt = world * vm::vec4d{local.x(), local.y(), local.z(), 1.0};
+      const auto pt = vm::vec3d{worldPt.x(), worldPt.y(), worldPt.z()};
+      if (!any)
+      {
+        bounds = vm::bbox3d{pt, pt};
+        any = true;
+      }
+      else
+      {
+        bounds = merge(bounds, vm::bbox3d{pt, pt});
+      }
+    }
+  }
+
+  if (!any)
+  {
+    return std::nullopt;
+  }
+  return bounds;
+}
+
+vm::bbox3d defaultBrushBounds(const vm::vec3d& origin)
+{
+  const auto half = vm::vec3d{
+    DefaultBrushHalfExtent, DefaultBrushHalfExtent, DefaultBrushHalfExtent};
+  return vm::bbox3d{origin - half, origin + half};
 }
 
 } // namespace
@@ -352,10 +569,16 @@ Result<std::vector<MayaAsciiEntitySpawn>> loadMayaAsciiScene(std::istream& strea
   }
 
   std::unordered_map<std::string, MayaNode> nodes;
+  std::unordered_map<std::string, MayaMeshShape> meshes;
   std::optional<std::string> currentNode;
+  std::optional<std::string> currentMesh;
+  bool parsingMeshVertices = false;
 
   auto ensureNode = [&](const std::string& name) -> MayaNode& {
-    return nodes.emplace(name, MayaNode{name, std::nullopt, {0, 0, 0}, {0, 0, 0}, false, false, {}})
+    return nodes
+      .emplace(
+             name,
+             MayaNode{name, std::nullopt, {0, 0, 0}, {0, 0, 0}, {1, 1, 1}, false, false, {}})
       .first->second;
   };
 
@@ -367,9 +590,32 @@ Result<std::vector<MayaAsciiEntitySpawn>> loadMayaAsciiScene(std::istream& strea
       continue;
     }
 
+    if (parsingMeshVertices)
+    {
+      if (
+        trimmed.starts_with("setAttr ") || trimmed.starts_with("createNode ")
+        || trimmed.starts_with("parent "))
+      {
+        parsingMeshVertices = false;
+      }
+      else if (looksLikeNumericContinuation(trimmed))
+      {
+        if (currentMesh)
+        {
+          appendFloat3Vertices(trimmed, meshes[*currentMesh].localVertices);
+        }
+        continue;
+      }
+      else
+      {
+        parsingMeshVertices = false;
+      }
+    }
+
     if (trimmed.starts_with("parent "))
     {
       currentNode = std::nullopt;
+      currentMesh = std::nullopt;
       const auto quoted = parseQuotedStrings(trimmed);
       if (quoted.size() >= 2)
       {
@@ -380,6 +626,11 @@ Result<std::vector<MayaAsciiEntitySpawn>> loadMayaAsciiScene(std::istream& strea
         {
           childIt->second.parent = parent;
         }
+        auto meshIt = meshes.find(child);
+        if (meshIt != meshes.end())
+        {
+          meshIt->second.parentTransform = parent;
+        }
       }
       continue;
     }
@@ -387,6 +638,7 @@ Result<std::vector<MayaAsciiEntitySpawn>> loadMayaAsciiScene(std::istream& strea
     if (trimmed.starts_with("createNode "))
     {
       currentNode = std::nullopt;
+      currentMesh = std::nullopt;
 
       if (trimmed.find("transform") != std::string::npos)
       {
@@ -415,15 +667,29 @@ Result<std::vector<MayaAsciiEntitySpawn>> loadMayaAsciiScene(std::istream& strea
       }
       else if (trimmed.find("mesh") != std::string::npos)
       {
-        if (auto parent = parseQuotedName(trimmed, "-p "))
+        if (auto name = parseQuotedName(trimmed, "-n "))
         {
-          auto parentIt = nodes.find(*parent);
-          if (parentIt != nodes.end())
+          auto& mesh = meshes.emplace(*name, MayaMeshShape{*name, std::nullopt, {}}).first->second;
+          if (auto parent = parseQuotedName(trimmed, "-p "))
           {
-            parentIt->second.hasMeshChild = true;
+            mesh.parentTransform = std::move(parent);
+            auto parentIt = nodes.find(*parent);
+            if (parentIt != nodes.end())
+            {
+              parentIt->second.hasMeshChild = true;
+            }
           }
+          currentMesh = name;
+          currentNode = name;
         }
       }
+      continue;
+    }
+
+    if (currentMesh && trimmed.starts_with("setAttr ") && trimmed.find(".vt[") != std::string::npos)
+    {
+      appendFloat3Vertices(trimmed, meshes[*currentMesh].localVertices);
+      parsingMeshVertices = true;
       continue;
     }
 
@@ -466,6 +732,13 @@ Result<std::vector<MayaAsciiEntitySpawn>> loadMayaAsciiScene(std::istream& strea
           node.rotationDeg = *r;
         }
       }
+      else if (attr == ".s")
+      {
+        if (auto s = parseDouble3(trimmed))
+        {
+          node.scale = *s;
+        }
+      }
       else if (trimmed.find("-type \"string\"") != std::string::npos && attr.starts_with("."))
       {
         auto key = attr.substr(1);
@@ -491,8 +764,9 @@ Result<std::vector<MayaAsciiEntitySpawn>> loadMayaAsciiScene(std::istream& strea
   for (const auto& [name, node] : nodes)
   {
     (void)name;
-    const auto classname = resolveClassname(node);
-    if (!shouldImportNode(node, classname))
+    const auto role = resolveObjectRole(node);
+    const auto classname = resolveClassname(node, role);
+    if (!shouldImportNode(node, role, classname))
     {
       continue;
     }
@@ -501,13 +775,16 @@ Result<std::vector<MayaAsciiEntitySpawn>> loadMayaAsciiScene(std::istream& strea
     const auto origin = vm::vec3d{world[3][0], world[3][1], world[3][2]};
 
     MayaAsciiEntitySpawn spawn;
+    spawn.kind = role == MayaObjectRole::BrushEntity ? MayaAsciiImportKind::Brush
+                                                     : MayaAsciiImportKind::Point;
     spawn.classname = classname;
     spawn.origin = origin;
     spawn.angles = formatAngles(world);
+    spawn.brushMaterial = brushMaterialForNode(node);
 
     for (const auto& [key, value] : node.stringAttrs)
     {
-      if (key == "tb_class" || key == "tb_model")
+      if (key == "tb_class" || key == "tb_model" || key == "tb_kind" || key == "tb_material")
       {
         continue;
       }
@@ -517,9 +794,23 @@ Result<std::vector<MayaAsciiEntitySpawn>> loadMayaAsciiScene(std::istream& strea
       }
     }
 
-    if (const auto model = modelPathForNode(node))
+    if (const auto model = modelPathForNode(node, role))
     {
       spawn.extraProperties.emplace("model", *model);
+    }
+
+    if (spawn.kind == MayaAsciiImportKind::Brush)
+    {
+      if (auto bounds = meshWorldBounds(node.name, world, meshes))
+      {
+        spawn.brushBounds = *bounds;
+        spawn.hasBrushBounds = true;
+      }
+      else
+      {
+        spawn.brushBounds = defaultBrushBounds(origin);
+        spawn.hasBrushBounds = true;
+      }
     }
 
     spawns.push_back(std::move(spawn));
@@ -528,14 +819,14 @@ Result<std::vector<MayaAsciiEntitySpawn>> loadMayaAsciiScene(std::istream& strea
   if (spawns.empty())
   {
     return Error{
-      "No importable entities found. Mark transforms with tb_entity_<classname>, entity_<classname>, "
-      "tb_class, mesh children, or tb_model."};
+      "No importable objects found. Tag transforms/locators with tb_entity_*, tb_spawn_*, "
+      "tb_trigger_*, tb_brush_*, tb_model_* / tb_model, or tb_class / tb_kind."};
   }
 
   return spawns;
 }
 
-std::vector<EntityNode*> importMayaAsciiSceneIntoMap(
+std::vector<Node*> importMayaAsciiSceneIntoMap(
   Map& map, const std::vector<MayaAsciiEntitySpawn>& spawns)
 {
   if (spawns.empty())
@@ -543,11 +834,46 @@ std::vector<EntityNode*> importMayaAsciiSceneIntoMap(
     return {};
   }
 
-  std::vector<Node*> entityNodes;
-  entityNodes.reserve(spawns.size());
+  BrushBuilder builder{map.worldNode().mapFormat(), map.worldBounds()};
+  std::vector<Node*> created;
+  created.reserve(spawns.size() * 2);
 
   for (const auto& spawn : spawns)
   {
+    if (spawn.kind == MayaAsciiImportKind::Brush)
+    {
+      auto entity = Entity{};
+      entity.setClassname(spawn.classname);
+      entity.setOrigin(spawn.origin);
+      if (!spawn.angles.empty())
+      {
+        entity.addOrUpdateProperty(EntityPropertyKeys::Angles, spawn.angles);
+      }
+      for (const auto& [key, value] : spawn.extraProperties)
+      {
+        entity.addOrUpdateProperty(key, value);
+      }
+
+      auto* entityNode = new EntityNode{std::move(entity)};
+      created.push_back(entityNode);
+
+      if (spawn.hasBrushBounds)
+      {
+        auto brush = builder.createCuboid(spawn.brushBounds, spawn.brushMaterial);
+        if (brush.is_success())
+        {
+          auto* brushNode = new BrushNode{brush.value()};
+          created.push_back(brushNode);
+          addNodes(map, {{parentForNodes(map), {entityNode}}});
+          addNodes(map, {{entityNode, {brushNode}}});
+          continue;
+        }
+      }
+
+      addNodes(map, {{parentForNodes(map), {entityNode}}});
+      continue;
+    }
+
     auto entity = Entity{};
     entity.setClassname(spawn.classname);
     entity.setOrigin(spawn.origin);
@@ -556,18 +882,12 @@ std::vector<EntityNode*> importMayaAsciiSceneIntoMap(
     {
       entity.addOrUpdateProperty(key, value);
     }
-    entityNodes.push_back(new EntityNode{std::move(entity)});
+    auto* entityNode = new EntityNode{std::move(entity)};
+    created.push_back(entityNode);
+    addNodes(map, {{parentForNodes(map), {entityNode}}});
   }
 
-  addNodes(map, {{parentForNodes(map), entityNodes}});
-
-  std::vector<EntityNode*> result;
-  result.reserve(entityNodes.size());
-  for (auto* node : entityNodes)
-  {
-    result.push_back(static_cast<EntityNode*>(node));
-  }
-  return result;
+  return created;
 }
 
 } // namespace tb::mdl

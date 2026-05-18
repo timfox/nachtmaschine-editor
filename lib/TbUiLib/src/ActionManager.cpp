@@ -847,9 +847,10 @@ void ActionManager::createFileMenu()
     [](const auto& context) { return context.hasDocument(); },
     std::nullopt,
     QObject::tr(
-      "Imports map entities from a Maya ASCII (.ma) scene. Name transforms "
-      "tb_entity_<classname> or entity_<classname>, set tb_class / tb_model custom "
-      "attributes, or parent mesh shapes for misc_model placement."),
+      "Imports a Maya ASCII (.ma) scene. Naming: tb_entity_* / tb_spawn_* (points), "
+      "tb_model_* or tb_model attr (misc_model), tb_trigger_* / tb_brush_* (brush "
+      "entities; mesh → axis-aligned volume), tb_locator_* (locators). Attributes: "
+      "tb_class, tb_material, tb_kind. Untagged mesh is not imported."),
   }));
   fileMenu.addItem(addAction(Action{
     "Menu/File/Reload Maya Scene",

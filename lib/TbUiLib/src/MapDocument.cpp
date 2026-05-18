@@ -288,28 +288,16 @@ void MapDocument::importMayaAsciiScene(std::filesystem::path path)
     return mdl::loadMayaAsciiScene(stream) | kdl::transform([&](const auto& spawns) {
              auto& map = this->map();
              auto transaction = mdl::Transaction{map, "Import Maya Scene"};
-             const auto entityNodes = mdl::importMayaAsciiSceneIntoMap(map, spawns);
-             if (entityNodes.empty())
+             const auto importedNodes = mdl::importMayaAsciiSceneIntoMap(map, spawns);
+             if (importedNodes.empty())
              {
                transaction.cancel();
                return;
              }
-             std::vector<mdl::Node*> importedNodes;
-             importedNodes.reserve(entityNodes.size());
-             for (auto* node : entityNodes)
-             {
-               importedNodes.push_back(node);
-             }
-             std::vector<mdl::Node*> selection;
-             selection.reserve(importedNodes.size());
-             for (auto* node : importedNodes)
-             {
-               selection.push_back(node);
-             }
-             mdl::selectNodes(map, selection);
+             mdl::selectNodes(map, importedNodes);
              transaction.commit();
-             m_mayaSceneImport = MayaSceneImport{std::move(path), std::move(importedNodes)};
-             logger().info() << "Imported " << entityNodes.size() << " entities from Maya scene "
+             m_mayaSceneImport = MayaSceneImport{std::move(path), importedNodes};
+             logger().info() << "Imported " << importedNodes.size() << " nodes from Maya scene "
                              << m_mayaSceneImport->path;
            });
   }) | kdl::transform_error([&](const auto& e) {
