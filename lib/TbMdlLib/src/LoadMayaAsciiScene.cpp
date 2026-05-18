@@ -143,6 +143,23 @@ std::optional<vm::vec3d> parseDouble3(std::string_view line)
   return vm::vec3d{x, y, z};
 }
 
+std::vector<std::string> parseQuotedStrings(std::string_view line)
+{
+  std::vector<std::string> result;
+  auto pos = line.find('"');
+  while (pos != std::string_view::npos)
+  {
+    const auto endQuote = line.find('"', pos + 1);
+    if (endQuote == std::string_view::npos)
+    {
+      break;
+    }
+    result.emplace_back(line.substr(pos + 1, endQuote - pos - 1));
+    pos = line.find('"', endQuote + 1);
+  }
+  return result;
+}
+
 std::optional<std::string> parseStringAttr(std::string_view line)
 {
   const auto typePos = line.find("-type \"string\"");
@@ -347,6 +364,23 @@ Result<std::vector<MayaAsciiEntitySpawn>> loadMayaAsciiScene(std::istream& strea
     const auto trimmed = trim(line);
     if (trimmed.empty() || trimmed.starts_with("//"))
     {
+      continue;
+    }
+
+    if (trimmed.starts_with("parent "))
+    {
+      currentNode = std::nullopt;
+      const auto quoted = parseQuotedStrings(trimmed);
+      if (quoted.size() >= 2)
+      {
+        const auto& child = quoted[quoted.size() - 2];
+        const auto& parent = quoted.back();
+        auto childIt = nodes.find(child);
+        if (childIt != nodes.end())
+        {
+          childIt->second.parent = parent;
+        }
+      }
       continue;
     }
 

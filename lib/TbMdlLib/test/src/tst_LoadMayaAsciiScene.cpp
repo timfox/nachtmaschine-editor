@@ -95,6 +95,18 @@ TEST_CASE("LoadMayaAsciiScene")
     CHECK(hasPlayer);
   }
 
+  SECTION("parent command hierarchy")
+  {
+    const auto hierarchyPath = std::filesystem::current_path()
+                               / "fixture/test/mdl/LoadMayaAsciiScene/level_hierarchy.ma";
+    const auto& spawns =
+      fs::Disk::withInputStream(hierarchyPath, loadMayaAsciiScene) | kdl::value();
+    REQUIRE(spawns.size() == 1);
+    CHECK(spawns.front().classname == "info_player_start");
+    // level_root at Maya (100,0,0), child local (0,0,50) → world Maya (100,0,50) → TB (100,-50,0)
+    CHECK(spawns.front().origin == vm::vec3d{100, -50, 0});
+  }
+
   SECTION("invalid header")
   {
     std::istringstream stream{"not maya\n"};

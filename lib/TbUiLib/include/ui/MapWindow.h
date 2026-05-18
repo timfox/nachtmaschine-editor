@@ -217,6 +217,10 @@ private:
 
 public:
   void importMayaAsciiScene();
+  void reloadMayaAsciiScene();
+  void unloadMayaAsciiScene();
+  bool canReloadMayaAsciiScene() const;
+  bool canUnloadMayaAsciiScene() const;
 
   void loadPointFile();
   void reloadPointFile();

@@ -112,6 +112,10 @@ Result<std::unique_ptr<MapDocument>> MapDocument::loadDocument(
 
 MapDocument::~MapDocument()
 {
+  if (isMayaSceneImported())
+  {
+    unloadMayaAsciiScene();
+  }
   if (isPointFileLoaded())
   {
     unloadPointFile();
@@ -271,30 +275,76 @@ void MapDocument::clearEntityDefinitionActions()
 
 void MapDocument::importMayaAsciiScene(std::filesystem::path path)
 {
+  static_assert(
+    !std::is_reference_v<decltype(path)>,
+    "path must be passed by value because reloadMayaAsciiScene() passes m_mayaSceneImport->path");
+
+  if (isMayaSceneImported())
+  {
+    unloadMayaAsciiScene();
+  }
+
   fs::Disk::withInputStream(path, [&](auto& stream) {
     return mdl::loadMayaAsciiScene(stream) | kdl::transform([&](const auto& spawns) {
              auto& map = this->map();
              auto transaction = mdl::Transaction{map, "Import Maya Scene"};
-             const auto nodes = mdl::importMayaAsciiSceneIntoMap(map, spawns);
-             if (nodes.empty())
+             const auto entityNodes = mdl::importMayaAsciiSceneIntoMap(map, spawns);
+             if (entityNodes.empty())
              {
                transaction.cancel();
                return;
              }
+             std::vector<mdl::Node*> importedNodes;
+             importedNodes.reserve(entityNodes.size());
+             for (auto* node : entityNodes)
+             {
+               importedNodes.push_back(node);
+             }
              std::vector<mdl::Node*> selection;
-             selection.reserve(nodes.size());
-             for (auto* node : nodes)
+             selection.reserve(importedNodes.size());
+             for (auto* node : importedNodes)
              {
                selection.push_back(node);
              }
              mdl::selectNodes(map, selection);
              transaction.commit();
-             logger().info() << "Imported " << nodes.size() << " entities from Maya scene "
-                             << path;
+             m_mayaSceneImport = MayaSceneImport{std::move(path), std::move(importedNodes)};
+             logger().info() << "Imported " << entityNodes.size() << " entities from Maya scene "
+                             << m_mayaSceneImport->path;
            });
   }) | kdl::transform_error([&](const auto& e) {
     logger().error() << "Couldn't import Maya scene " << path << ": " << e.msg;
+    m_mayaSceneImport = std::nullopt;
   });
+}
+
+bool MapDocument::isMayaSceneImported() const
+{
+  return m_mayaSceneImport != std::nullopt;
+}
+
+bool MapDocument::canReloadMayaAsciiScene() const
+{
+  return isMayaSceneImported();
+}
+
+void MapDocument::reloadMayaAsciiScene()
+{
+  contract_pre(isMayaSceneImported());
+
+  importMayaAsciiScene(m_mayaSceneImport->path);
+}
+
+void MapDocument::unloadMayaAsciiScene()
+{
+  contract_pre(isMayaSceneImported());
+
+  auto& map = this->map();
+  auto transaction = mdl::Transaction{map, "Unload Maya Scene"};
+  mdl::removeNodes(map, m_mayaSceneImport->nodes);
+  transaction.commit();
+  logger().info() << "Unloaded Maya scene " << m_mayaSceneImport->path;
+  m_mayaSceneImport = std::nullopt;
 }
 
 void MapDocument::loadPointFile(std::filesystem::path path)

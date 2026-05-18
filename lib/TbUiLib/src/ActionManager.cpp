@@ -852,6 +852,30 @@ void ActionManager::createFileMenu()
       "attributes, or parent mesh shapes for misc_model placement."),
   }));
   fileMenu.addItem(addAction(Action{
+    "Menu/File/Reload Maya Scene",
+    QObject::tr("Reload Maya Scene"),
+    ActionContext::Any,
+    QKeySequence{},
+    [](auto& context) { context.mapWindow().reloadMayaAsciiScene(); },
+    [](const auto& context) {
+      return context.hasDocument() && context.mapWindow().canReloadMayaAsciiScene();
+    },
+    std::nullopt,
+    QObject::tr("Re-imports entities from the last Maya ASCII (.ma) file."),
+  }));
+  fileMenu.addItem(addAction(Action{
+    "Menu/File/Unload Maya Scene",
+    QObject::tr("Unload Maya Scene"),
+    ActionContext::Any,
+    QKeySequence{},
+    [](auto& context) { context.mapWindow().unloadMayaAsciiScene(); },
+    [](const auto& context) {
+      return context.hasDocument() && context.mapWindow().canUnloadMayaAsciiScene();
+    },
+    std::nullopt,
+    QObject::tr("Removes entities imported from the last Maya ASCII (.ma) file."),
+  }));
+  fileMenu.addItem(addAction(Action{
     "Menu/File/Load Point File...",
     QObject::tr("Load Point File..."),
     ActionContext::Any,

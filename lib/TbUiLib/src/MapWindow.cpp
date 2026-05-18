@@ -1181,6 +1181,32 @@ void MapWindow::importMayaAsciiScene()
   }
 }
 
+void MapWindow::reloadMayaAsciiScene()
+{
+  if (canReloadMayaAsciiScene())
+  {
+    m_document->reloadMayaAsciiScene();
+  }
+}
+
+void MapWindow::unloadMayaAsciiScene()
+{
+  if (canUnloadMayaAsciiScene())
+  {
+    m_document->unloadMayaAsciiScene();
+  }
+}
+
+bool MapWindow::canUnloadMayaAsciiScene() const
+{
+  return m_document->isMayaSceneImported();
+}
+
+bool MapWindow::canReloadMayaAsciiScene() const
+{
+  return m_document->canReloadMayaAsciiScene();
+}
+
 void MapWindow::loadPointFile()
 {
   const auto& map = m_document->map();
