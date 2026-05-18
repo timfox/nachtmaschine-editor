@@ -18,6 +18,7 @@
  */
 
 #include "mdl/CatchConfig.h"
+#include "mdl/Brush.h"
 #include "mdl/BrushNode.h"
 #include "mdl/EntityNode.h"
 #include "mdl/LoadMayaAsciiScene.h"
@@ -32,18 +33,51 @@
 #include "vm/vec.h"
 
 #include <algorithm>
+#include <array>
 #include <filesystem>
 #include <sstream>
+
+#if defined(__linux__)
+#include <climits>
+#include <unistd.h>
+#endif
 
 #include <catch2/catch_test_macros.hpp>
 
 namespace tb::mdl
 {
+namespace
+{
+
+std::filesystem::path mdlTestFixture(const std::filesystem::path& relativeFromMdl)
+{
+  const auto path = std::filesystem::path{"fixture/test/mdl"} / relativeFromMdl;
+  const auto fromCwd = std::filesystem::current_path() / path;
+  if (std::filesystem::exists(fromCwd))
+  {
+    return fromCwd;
+  }
+#if defined(__linux__)
+  std::array<char, PATH_MAX> linkTarget{};
+  const auto len = ::readlink("/proc/self/exe", linkTarget.data(), linkTarget.size() - 1);
+  if (len > 0)
+  {
+    linkTarget[static_cast<size_t>(len)] = '\0';
+    const auto fromExe = std::filesystem::path{linkTarget.data()}.parent_path() / path;
+    if (std::filesystem::exists(fromExe))
+    {
+      return fromExe;
+    }
+  }
+#endif
+  return fromCwd;
+}
+
+} // namespace
 
 TEST_CASE("LoadMayaAsciiScene")
 {
-  const auto fixturePath =
-    std::filesystem::current_path() / "fixture/test/mdl/LoadMayaAsciiScene/level_entities.ma";
+  const auto fixturePath = mdlTestFixture("LoadMayaAsciiScene/level_entities.ma");
 
   SECTION("canLoadMayaAsciiScene")
   {
@@ -100,8 +134,7 @@ TEST_CASE("LoadMayaAsciiScene")
 
   SECTION("roles: triggers, spawns, brush mesh")
   {
-    const auto rolesPath =
-      std::filesystem::current_path() / "fixture/test/mdl/LoadMayaAsciiScene/level_roles.ma";
+    const auto rolesPath = mdlTestFixture("LoadMayaAsciiScene/level_roles.ma");
     const auto& spawns = fs::Disk::withInputStream(rolesPath, loadMayaAsciiScene) | kdl::value();
     REQUIRE(spawns.size() == 3);
 
@@ -132,8 +165,7 @@ TEST_CASE("LoadMayaAsciiScene")
 
   SECTION("brush shape modes: hull vs box")
   {
-    const auto shapesPath = std::filesystem::current_path()
-                            / "fixture/test/mdl/LoadMayaAsciiScene/level_brush_shapes.ma";
+    const auto shapesPath = mdlTestFixture("LoadMayaAsciiScene/level_brush_shapes.ma");
     const auto& spawns =
       fs::Disk::withInputStream(shapesPath, loadMayaAsciiScene) | kdl::value();
     REQUIRE(spawns.size() == 2);
@@ -153,14 +185,38 @@ TEST_CASE("LoadMayaAsciiScene")
 
   SECTION("parent command hierarchy")
   {
-    const auto hierarchyPath = std::filesystem::current_path()
-                               / "fixture/test/mdl/LoadMayaAsciiScene/level_hierarchy.ma";
+    const auto hierarchyPath = mdlTestFixture("LoadMayaAsciiScene/level_hierarchy.ma");
     const auto& spawns =
       fs::Disk::withInputStream(hierarchyPath, loadMayaAsciiScene) | kdl::value();
     REQUIRE(spawns.size() == 1);
     CHECK(spawns.front().classname == "info_player_start");
     // level_root at Maya (100,0,0), child local (0,0,50) → world Maya (100,0,50) → TB (100,-50,0)
     CHECK(spawns.front().origin == vm::vec3d{100, -50, 0});
+  }
+
+  SECTION("import brush entities from roles fixture")
+  {
+    auto fixture = MapFixture{};
+    auto& map = fixture.create();
+    const auto rolesPath = mdlTestFixture("LoadMayaAsciiScene/level_roles.ma");
+    const auto& spawns = fs::Disk::withInputStream(rolesPath, loadMayaAsciiScene) | kdl::value();
+
+    auto transaction = Transaction{map, "Import Maya roles"};
+    const auto nodes = importMayaAsciiSceneIntoMap(map, spawns);
+    transaction.commit();
+
+    REQUIRE(nodes.size() == 5);
+    const auto detailEntity = std::find_if(nodes.begin(), nodes.end(), [](const Node* node) {
+      const auto* entityNode = dynamic_cast<const EntityNode*>(node);
+      return entityNode != nullptr && entityNode->entity().classname() == "func_detail";
+    });
+    REQUIRE(detailEntity != nodes.end());
+    const auto* entityNode = dynamic_cast<const EntityNode*>(*detailEntity);
+    REQUIRE(entityNode != nullptr);
+    REQUIRE(entityNode->children().size() == 1);
+    const auto* brushNode = dynamic_cast<const BrushNode*>(entityNode->children().front());
+    REQUIRE(brushNode != nullptr);
+    CHECK(brushNode->brush().faceCount() == 6);
   }
 
   SECTION("invalid header")

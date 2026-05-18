@@ -20,7 +20,7 @@
 - For library changes, prefer the corresponding <Name>LibTest target to validate the change.
 - Always build the relevant test target before running tests.
 - Tests use Catch2.
-- If VS Code test discovery is unavailable, run the built test executable directly from the build tree, for example build/lib/TbMdlLib/test/TbMdlLibTest.
+- If VS Code test discovery is unavailable, run the built test executable directly from the build tree, for example build/lib/TbMdlLib/test/TbMdlLibTest. Fixtures are copied next to the binary; **`LoadMayaAsciiScene`** tests also resolve fixtures via the executable directory (Linux: `/proc/self/exe`) when the process cwd is not the test folder.
 - Use --list-tests to discover available tests and Catch2 filters to run a focused subset.
 - Use Build.md for platform-specific setup and dependency details.
 
