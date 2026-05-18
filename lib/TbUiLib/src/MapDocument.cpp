@@ -34,7 +34,10 @@
 #include "mdl/Grid.h"
 #include "mdl/LinkedGroupUtils.h"
 #include "mdl/LoadMaterialCollections.h"
+#include "mdl/LoadMayaAsciiScene.h"
 #include "mdl/Map.h"
+#include "mdl/Map_Nodes.h"
+#include "mdl/Map_Selection.h"
 #include "mdl/NodeReader.h"
 #include "mdl/NodeWriter.h"
 #include "mdl/PortalFile.h"
@@ -264,6 +267,34 @@ std::vector<Action>& MapDocument::cacheEntityDefinitionActions(
 void MapDocument::clearEntityDefinitionActions()
 {
   m_cachedEntityDefinitionActions = std::nullopt;
+}
+
+void MapDocument::importMayaAsciiScene(std::filesystem::path path)
+{
+  fs::Disk::withInputStream(path, [&](auto& stream) {
+    return mdl::loadMayaAsciiScene(stream) | kdl::transform([&](const auto& spawns) {
+             auto& map = this->map();
+             auto transaction = mdl::Transaction{map, "Import Maya Scene"};
+             const auto nodes = mdl::importMayaAsciiSceneIntoMap(map, spawns);
+             if (nodes.empty())
+             {
+               transaction.cancel();
+               return;
+             }
+             std::vector<mdl::Node*> selection;
+             selection.reserve(nodes.size());
+             for (auto* node : nodes)
+             {
+               selection.push_back(node);
+             }
+             mdl::selectNodes(map, selection);
+             transaction.commit();
+             logger().info() << "Imported " << nodes.size() << " entities from Maya scene "
+                             << path;
+           });
+  }) | kdl::transform_error([&](const auto& e) {
+    logger().error() << "Couldn't import Maya scene " << path << ": " << e.msg;
+  });
 }
 
 void MapDocument::loadPointFile(std::filesystem::path path)

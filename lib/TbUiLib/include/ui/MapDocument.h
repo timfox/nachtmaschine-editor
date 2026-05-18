@@ -263,6 +263,9 @@ public: // point file management
   void reloadPointFile();
   void unloadPointFile();
 
+public: // Maya ASCII scene import
+  void importMayaAsciiScene(std::filesystem::path path);
+
 public: // portal file management
   const std::vector<vm::polygon3f>* portals() const;
   void loadPortalFile(std::filesystem::path path);

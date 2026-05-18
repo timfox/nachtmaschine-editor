@@ -839,6 +839,19 @@ void ActionManager::createFileMenu()
   /* ========== File Menu (Associated Resources) ========== */
   fileMenu.addSeparator();
   fileMenu.addItem(addAction(Action{
+    "Menu/File/Import Maya Scene...",
+    QObject::tr("Import Maya Scene..."),
+    ActionContext::Any,
+    QKeySequence{},
+    [](auto& context) { context.mapWindow().importMayaAsciiScene(); },
+    [](const auto& context) { return context.hasDocument(); },
+    std::nullopt,
+    QObject::tr(
+      "Imports map entities from a Maya ASCII (.ma) scene. Name transforms "
+      "tb_entity_<classname> or entity_<classname>, set tb_class / tb_model custom "
+      "attributes, or parent mesh shapes for misc_model placement."),
+  }));
+  fileMenu.addItem(addAction(Action{
     "Menu/File/Load Point File...",
     QObject::tr("Load Point File..."),
     ActionContext::Any,

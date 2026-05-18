@@ -216,6 +216,8 @@ private:
   bool confirmRevertDocument();
 
 public:
+  void importMayaAsciiScene();
+
   void loadPointFile();
   void reloadPointFile();
   void unloadPointFile();

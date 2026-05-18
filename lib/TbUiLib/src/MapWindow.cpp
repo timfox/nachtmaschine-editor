@@ -1163,6 +1163,24 @@ bool MapWindow::confirmRevertDocument()
   return messageBox.clickedButton() == revertButton;
 }
 
+void MapWindow::importMayaAsciiScene()
+{
+  const auto& map = m_document->map();
+  const auto path = map.path();
+  const auto defaultDir = !path.empty() ? pathAsQPath(path.parent_path()) : QString{};
+
+  const auto fileName = QFileDialog::getOpenFileName(
+    this,
+    tr("Import Maya Scene"),
+    defaultDir,
+    tr("Maya ASCII scenes (*.ma);;Any files (*.*)"));
+
+  if (!fileName.isEmpty())
+  {
+    m_document->importMayaAsciiScene(pathFromQString(fileName));
+  }
+}
+
 void MapWindow::loadPointFile()
 {
   const auto& map = m_document->map();
