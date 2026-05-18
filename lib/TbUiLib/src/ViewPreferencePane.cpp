@@ -229,7 +229,7 @@ void ViewPreferencePane::bindEvents()
     &ViewPreferencePane::layoutChanged);
   connect(
     m_link2dCameras,
-    &QCheckBox::checkStateChanged,
+    &QCheckBox::stateChanged,
     this,
     &ViewPreferencePane::link2dCamerasChanged);
   connect(
@@ -246,12 +246,12 @@ void ViewPreferencePane::bindEvents()
     m_fovSlider, &SliderWithLabel::valueChanged, this, &ViewPreferencePane::fovChanged);
   connect(
     m_showAxes,
-    &QCheckBox::checkStateChanged,
+    &QCheckBox::stateChanged,
     this,
     &ViewPreferencePane::showAxesChanged);
   connect(
     m_enableMsaa,
-    &QCheckBox::checkStateChanged,
+    &QCheckBox::stateChanged,
     this,
     &ViewPreferencePane::enableMsaaChanged);
   connect(

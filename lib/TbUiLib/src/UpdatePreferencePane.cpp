@@ -64,7 +64,7 @@ QWidget* UpdatePreferencePane::createUpdatePreferences()
 To download and install an available update, click on the link labeled "Update available".)")};
 
   m_autoCheckForUpdates = new QCheckBox{};
-  connect(m_autoCheckForUpdates, &QCheckBox::checkStateChanged, [&](const auto state) {
+  connect(m_autoCheckForUpdates, &QCheckBox::stateChanged, [&](const auto state) {
     const auto value = state == Qt::Checked;
     auto& prefs = PreferenceManager::instance();
     prefs.set(Preferences::AutoCheckForUpdates, value);
@@ -72,7 +72,7 @@ To download and install an available update, click on the link labeled "Update a
 
   m_includePreReleaseUpdates = new QCheckBox{};
   connect(
-    m_includePreReleaseUpdates, &QCheckBox::checkStateChanged, [&](const auto state) {
+    m_includePreReleaseUpdates, &QCheckBox::stateChanged, [&](const auto state) {
       const auto value = state == Qt::Checked;
       auto& prefs = PreferenceManager::instance();
       prefs.set(Preferences::IncludePreReleaseUpdates, value);
@@ -82,7 +82,7 @@ To download and install an available update, click on the link labeled "Update a
 
   m_includeDraftReleaseUpdates = new QCheckBox{};
   connect(
-    m_includeDraftReleaseUpdates, &QCheckBox::checkStateChanged, [&](const auto state) {
+    m_includeDraftReleaseUpdates, &QCheckBox::stateChanged, [&](const auto state) {
       const auto value = state == Qt::Checked;
       auto& prefs = PreferenceManager::instance();
       prefs.set(Preferences::IncludeDraftReleaseUpdates, value);
