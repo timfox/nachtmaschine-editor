@@ -42,15 +42,25 @@ class Node;
  *   tb_entity_<classname> / entity_<classname> / tb_spawn_<classname> — point entity
  *   tb_model_<path> or tb_model attribute — misc_model (not inferred from untagged mesh)
  *   tb_trigger_<classname> — brush entity (default classname trigger_once)
- *   tb_brush_<classname> — brush entity (default func_static)
+ *   tb_brush_<classname> — brush entity (mesh → convex hull; fallback axis-aligned box)
+ *   tb_brush_box_<classname> — brush entity forced to mesh axis-aligned box
+ *   tb_brush_hull_<classname> — brush entity forced to convex hull from mesh vertices
  *   tb_locator_<classname> — point entity from a locator
  *
- * Attributes: tb_class, tb_model, tb_material, tb_kind (entity|model|brush|trigger)
+ * Attributes: tb_class, tb_model, tb_material, tb_kind (entity|model|brush|trigger),
+ *   tb_brush_shape (box|hull|aabb — optional brush volume mode)
  */
 enum class MayaAsciiImportKind
 {
   Point,
   Brush,
+};
+
+enum class MayaBrushShapeMode
+{
+  Auto,
+  AxisAlignedBox,
+  ConvexHull,
 };
 
 struct MayaAsciiEntitySpawn
@@ -60,8 +70,10 @@ struct MayaAsciiEntitySpawn
   vm::vec3d origin{0, 0, 0};
   std::string angles; // "pitch yaw roll" in degrees, idTech style
   std::map<std::string, std::string> extraProperties;
+  MayaBrushShapeMode brushShapeMode = MayaBrushShapeMode::Auto;
   vm::bbox3d brushBounds{};
   bool hasBrushBounds = false;
+  std::vector<vm::vec3d> brushHullVertices;
   std::string brushMaterial = "common/caulk";
 };
 

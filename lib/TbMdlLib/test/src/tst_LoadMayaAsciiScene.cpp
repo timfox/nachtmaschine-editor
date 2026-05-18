@@ -124,8 +124,31 @@ TEST_CASE("LoadMayaAsciiScene")
     REQUIRE(brush != spawns.end());
     CHECK(brush->kind == MayaAsciiImportKind::Brush);
     CHECK(brush->hasBrushBounds);
+    CHECK(brush->brushShapeMode == MayaBrushShapeMode::Auto);
+    CHECK(brush->brushHullVertices.size() == 8);
     const auto size = brush->brushBounds.size();
     CHECK(size.x() > 50.0);
+  }
+
+  SECTION("brush shape modes: hull vs box")
+  {
+    const auto shapesPath = std::filesystem::current_path()
+                            / "fixture/test/mdl/LoadMayaAsciiScene/level_brush_shapes.ma";
+    const auto& spawns =
+      fs::Disk::withInputStream(shapesPath, loadMayaAsciiScene) | kdl::value();
+    REQUIRE(spawns.size() == 2);
+
+    const auto hull = std::find_if(spawns.begin(), spawns.end(), [](const auto& s) {
+      return s.classname == "func_static" && s.brushShapeMode == MayaBrushShapeMode::ConvexHull;
+    });
+    REQUIRE(hull != spawns.end());
+    CHECK(hull->brushHullVertices.size() == 8);
+
+    const auto box = std::find_if(spawns.begin(), spawns.end(), [](const auto& s) {
+      return s.classname == "func_wall" && s.brushShapeMode == MayaBrushShapeMode::AxisAlignedBox;
+    });
+    REQUIRE(box != spawns.end());
+    CHECK(box->brushHullVertices.size() == 8);
   }
 
   SECTION("parent command hierarchy")
