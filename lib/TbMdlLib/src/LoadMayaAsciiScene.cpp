@@ -31,6 +31,7 @@
 #include "vm/mat_ext.h"
 
 #include <cctype>
+#include <cstring>
 #include <istream>
 #include <optional>
 #include <sstream>
@@ -119,12 +120,13 @@ std::optional<std::string> parseQuotedName(std::string_view line, const std::str
 
 std::optional<vm::vec3d> parseDouble3(std::string_view line)
 {
-  const auto typePos = line.find("-type \"double3\"");
+  const auto typeToken = "-type \"double3\"";
+  const auto typePos = line.find(typeToken);
   if (typePos == std::string_view::npos)
   {
     return std::nullopt;
   }
-  const auto valuesPos = line.find_first_of("0123456789.-", typePos);
+  const auto valuesPos = line.find_first_of("0123456789.-", typePos + std::strlen(typeToken));
   if (valuesPos == std::string_view::npos)
   {
     return std::nullopt;

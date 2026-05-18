@@ -41,8 +41,8 @@ namespace tb::mdl
 
 TEST_CASE("LoadMayaAsciiScene")
 {
-  const auto fixturePath = std::filesystem::current_path()
-                             / "fixture/test/mdl/LoadMayaAsciiScene/level_entities.ma";
+  const auto fixturePath =
+    std::filesystem::current_path() / "fixture/test/mdl/LoadMayaAsciiScene/level_entities.ma";
 
   SECTION("canLoadMayaAsciiScene")
   {

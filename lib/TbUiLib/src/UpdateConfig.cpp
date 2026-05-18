@@ -19,10 +19,13 @@
 
 #include "ui/UpdateConfig.h"
 
-#include <QDir>                      // IWYU pragma: keep
-#include <QFileInfo>                 // IWYU pragma: keep
-#include <QNtfsPermissionCheckGuard> // IWYU pragma: keep
+#include <QDir>      // IWYU pragma: keep
+#include <QFileInfo> // IWYU pragma: keep
 #include <QProcess>
+
+#if defined(_WIN32) && QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+#include <QNtfsPermissionCheckGuard> // IWYU pragma: keep
+#endif
 
 #include "Macros.h" // IWYU pragma: keep
 #include "PreferenceManager.h"
@@ -104,11 +107,13 @@ std::optional<std::filesystem::path> getAppFolderPath()
 
 bool getRequiresAdminPrivileges([[maybe_unused]] const std::filesystem::path& targetPath)
 {
-#if defined _WIN32
+#if defined(_WIN32) && QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
   // enable NTFS permission checks:
   const auto permissionGuard = QNtfsPermissionCheckGuard{};
   Q_ASSERT(qAreNtfsPermissionChecksEnabled());
 
+  return !checkPathWritable(targetPath);
+#elif defined(_WIN32)
   return !checkPathWritable(targetPath);
 #else
   return false;

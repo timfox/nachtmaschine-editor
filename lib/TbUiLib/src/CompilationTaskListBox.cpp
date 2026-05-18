@@ -19,6 +19,8 @@
 
 #include "ui/CompilationTaskListBox.h"
 
+#include "ui/QtCheckBoxSignals.h"
+
 #include <QBoxLayout>
 #include <QCheckBox>
 #include <QCompleter>
@@ -162,7 +164,7 @@ Variables are allowed.)");
     &CompilationExportMapTaskEditor::targetSpecChanged);
   connect(
     m_stripTbProperties,
-    &QCheckBox::checkStateChanged,
+    CheckBoxStateChanged,
     this,
     &CompilationExportMapTaskEditor::stripTbPropertiesChanged);
 }
@@ -501,7 +503,7 @@ Variables are allowed.)");
     &CompilationRunToolTaskEditor::parameterSpecChanged);
   connect(
     m_treatNonZeroResultCodeAsError,
-    &QCheckBox::checkStateChanged,
+    CheckBoxStateChanged,
     this,
     &CompilationRunToolTaskEditor::treatNonZeroResultCodeAsErrorChanged);
 }

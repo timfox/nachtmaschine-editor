@@ -19,6 +19,8 @@
 
 #include "ui/ViewPreferencePane.h"
 
+#include "ui/QtCheckBoxSignals.h"
+
 #include <QBoxLayout>
 #include <QCheckBox>
 #include <QComboBox>
@@ -229,7 +231,7 @@ void ViewPreferencePane::bindEvents()
     &ViewPreferencePane::layoutChanged);
   connect(
     m_link2dCameras,
-    &QCheckBox::checkStateChanged,
+    CheckBoxStateChanged,
     this,
     &ViewPreferencePane::link2dCamerasChanged);
   connect(
@@ -246,12 +248,12 @@ void ViewPreferencePane::bindEvents()
     m_fovSlider, &SliderWithLabel::valueChanged, this, &ViewPreferencePane::fovChanged);
   connect(
     m_showAxes,
-    &QCheckBox::checkStateChanged,
+    CheckBoxStateChanged,
     this,
     &ViewPreferencePane::showAxesChanged);
   connect(
     m_enableMsaa,
-    &QCheckBox::checkStateChanged,
+    CheckBoxStateChanged,
     this,
     &ViewPreferencePane::enableMsaaChanged);
   connect(

@@ -111,6 +111,10 @@ target_link_libraries(TbMdlLibTest
     TbMdlTestUtilsLib
 )
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  target_link_libraries(TbMdlLibTest PRIVATE nacht_tb_vcpkg_freeimage_deps)
+endif()
+
 # Copy fixtures
 set(TEST_FIXTURE_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/fixture)
 set(TEST_FIXTURE_DEST_DIR $<TARGET_FILE_DIR:TbMdlLibTest>/fixture)
