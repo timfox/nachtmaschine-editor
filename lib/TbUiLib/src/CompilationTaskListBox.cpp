@@ -162,7 +162,7 @@ Variables are allowed.)");
     &CompilationExportMapTaskEditor::targetSpecChanged);
   connect(
     m_stripTbProperties,
-    &QCheckBox::checkStateChanged,
+    &QCheckBox::stateChanged,
     this,
     &CompilationExportMapTaskEditor::stripTbPropertiesChanged);
 }
@@ -501,7 +501,7 @@ Variables are allowed.)");
     &CompilationRunToolTaskEditor::parameterSpecChanged);
   connect(
     m_treatNonZeroResultCodeAsError,
-    &QCheckBox::checkStateChanged,
+    &QCheckBox::stateChanged,
     this,
     &CompilationRunToolTaskEditor::treatNonZeroResultCodeAsErrorChanged);
 }
