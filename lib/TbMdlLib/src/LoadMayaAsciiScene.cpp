@@ -19,6 +19,7 @@
 
 #include "mdl/LoadMayaAsciiScene.h"
 
+#include "mdl/Brush.h"
 #include "mdl/BrushBuilder.h"
 #include "mdl/BrushNode.h"
 #include "mdl/Entity.h"
@@ -33,6 +34,7 @@
 
 #include "vm/bbox.h"
 #include "vm/mat_ext.h"
+#include "vm/vec.h"
 
 #include <cctype>
 #include <cstring>
@@ -350,7 +352,9 @@ MayaObjectRole resolveObjectRole(const MayaNode& node)
   }
 
   const auto& name = node.name;
-  if (hasPrefix(name, "tb_trigger_") || hasPrefix(name, "tb_brush_"))
+  if (
+    hasPrefix(name, "tb_trigger_") || hasPrefix(name, "tb_brush_")
+    || hasPrefix(name, "tb_brush_hull_") || hasPrefix(name, "tb_brush_box_"))
   {
     return MayaObjectRole::BrushEntity;
   }
@@ -416,6 +420,16 @@ std::string resolveClassname(const MayaNode& node, MayaObjectRole role)
       return suffix;
     }
     return "trigger_" + suffix;
+  }
+  if (hasPrefix(name, "tb_brush_hull_"))
+  {
+    const auto suffix = stripPrefix(name, "tb_brush_hull_");
+    return suffix.empty() ? "func_static" : suffix;
+  }
+  if (hasPrefix(name, "tb_brush_box_"))
+  {
+    const auto suffix = stripPrefix(name, "tb_brush_box_");
+    return suffix.empty() ? "func_static" : suffix;
   }
   if (hasPrefix(name, "tb_brush_"))
   {
@@ -547,6 +561,106 @@ vm::bbox3d defaultBrushBounds(const vm::vec3d& origin)
   const auto half = vm::vec3d{
     DefaultBrushHalfExtent, DefaultBrushHalfExtent, DefaultBrushHalfExtent};
   return vm::bbox3d{origin - half, origin + half};
+}
+
+constexpr double HullVertexMergeEpsilon = 1e-3;
+
+bool pointsNear(const vm::vec3d& a, const vm::vec3d& b)
+{
+  return vm::squared_length(a - b) < HullVertexMergeEpsilon * HullVertexMergeEpsilon;
+}
+
+std::vector<vm::vec3d> meshWorldVertices(
+  const std::string& transformName,
+  const vm::mat4x4d& world,
+  const std::unordered_map<std::string, MayaMeshShape>& meshes)
+{
+  std::vector<vm::vec3d> vertices;
+  for (const auto& [meshName, mesh] : meshes)
+  {
+    (void)meshName;
+    if (mesh.parentTransform != transformName)
+    {
+      continue;
+    }
+    for (const auto& local : mesh.localVertices)
+    {
+      const auto worldPt = world * vm::vec4d{local.x(), local.y(), local.z(), 1.0};
+      const auto pt = vm::vec3d{worldPt.x(), worldPt.y(), worldPt.z()};
+      const auto duplicate = std::any_of(
+        vertices.begin(), vertices.end(), [&](const auto& existing) {
+          return pointsNear(existing, pt);
+        });
+      if (!duplicate)
+      {
+        vertices.push_back(pt);
+      }
+    }
+  }
+  return vertices;
+}
+
+MayaBrushShapeMode brushShapeModeForNode(const MayaNode& node)
+{
+  if (const auto shape = stringAttr(node, "tb_brush_shape"))
+  {
+    if (*shape == "box" || *shape == "aabb")
+    {
+      return MayaBrushShapeMode::AxisAlignedBox;
+    }
+    if (*shape == "hull")
+    {
+      return MayaBrushShapeMode::ConvexHull;
+    }
+  }
+  if (hasPrefix(node.name, "tb_brush_box_"))
+  {
+    return MayaBrushShapeMode::AxisAlignedBox;
+  }
+  if (hasPrefix(node.name, "tb_brush_hull_"))
+  {
+    return MayaBrushShapeMode::ConvexHull;
+  }
+  return MayaBrushShapeMode::Auto;
+}
+
+Result<Brush> brushForSpawn(
+  const BrushBuilder& builder, const MayaAsciiEntitySpawn& spawn)
+{
+  const auto makeBox = [&]() -> Result<Brush> {
+    if (!spawn.hasBrushBounds)
+    {
+      return Error{"Brush has no bounds"};
+    }
+    return builder.createCuboid(spawn.brushBounds, spawn.brushMaterial);
+  };
+
+  const auto makeHull = [&]() -> Result<Brush> {
+    if (spawn.brushHullVertices.size() < 4)
+    {
+      return Error{"Brush hull needs at least four mesh vertices"};
+    }
+    return builder.createBrush(spawn.brushHullVertices, spawn.brushMaterial);
+  };
+
+  switch (spawn.brushShapeMode)
+  {
+  case MayaBrushShapeMode::AxisAlignedBox:
+    return makeBox();
+  case MayaBrushShapeMode::ConvexHull:
+    if (auto hull = makeHull(); hull.is_success())
+    {
+      return hull;
+    }
+    return makeBox();
+  case MayaBrushShapeMode::Auto:
+    if (auto hull = makeHull(); hull.is_success())
+    {
+      return hull;
+    }
+    return makeBox();
+  }
+  return Error{"Unknown brush shape mode"};
 }
 
 } // namespace
@@ -784,7 +898,9 @@ Result<std::vector<MayaAsciiEntitySpawn>> loadMayaAsciiScene(std::istream& strea
 
     for (const auto& [key, value] : node.stringAttrs)
     {
-      if (key == "tb_class" || key == "tb_model" || key == "tb_kind" || key == "tb_material")
+      if (
+        key == "tb_class" || key == "tb_model" || key == "tb_kind" || key == "tb_material"
+        || key == "tb_brush_shape")
       {
         continue;
       }
@@ -801,6 +917,8 @@ Result<std::vector<MayaAsciiEntitySpawn>> loadMayaAsciiScene(std::istream& strea
 
     if (spawn.kind == MayaAsciiImportKind::Brush)
     {
+      spawn.brushShapeMode = brushShapeModeForNode(node);
+      spawn.brushHullVertices = meshWorldVertices(node.name, world, meshes);
       if (auto bounds = meshWorldBounds(node.name, world, meshes))
       {
         spawn.brushBounds = *bounds;
@@ -859,8 +977,7 @@ std::vector<Node*> importMayaAsciiSceneIntoMap(
 
       if (spawn.hasBrushBounds)
       {
-        auto brush = builder.createCuboid(spawn.brushBounds, spawn.brushMaterial);
-        if (brush.is_success())
+        if (auto brush = brushForSpawn(builder, spawn); brush.is_success())
         {
           auto* brushNode = new BrushNode{brush.value()};
           created.push_back(brushNode);
