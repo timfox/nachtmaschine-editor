@@ -15,7 +15,7 @@ Copyright (C) 2026 Gopex LLC. All rights reserved.
 // Replace caulk on the inner faces with your own materials once the
 // engine is up and rendering.
 //
-// Coordinate convention (id Tech): +Z is up, units are inches/world
+// Coordinate convention (engine): +Z is up, units are inches/world
 // units. Three plane points per face are listed so that
 //   normal = (p1 - p2) x (p3 - p2)
 // faces OUTWARD from the brush, matching what idPlane::FromPoints

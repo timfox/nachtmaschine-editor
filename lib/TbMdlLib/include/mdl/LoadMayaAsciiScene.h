@@ -68,7 +68,7 @@ struct MayaAsciiEntitySpawn
   MayaAsciiImportKind kind = MayaAsciiImportKind::Point;
   std::string classname;
   vm::vec3d origin{0, 0, 0};
-  std::string angles; // "pitch yaw roll" in degrees, idTech style
+  std::string angles; // "pitch yaw roll" in degrees, engine style
   std::map<std::string, std::string> extraProperties;
   MayaBrushShapeMode brushShapeMode = MayaBrushShapeMode::Auto;
   vm::bbox3d brushBounds{};

@@ -1,4 +1,4 @@
-// Nachtmaschine / idTech 4–style entities for TrenchBroom + nachtmap.
+// Nachtmaschine / BFG-era entities for TrenchBroom + nachtmap.
 // Extend with project-specific defs; engine also supports exporting FGD via in-game tooling.
 
 @SolidClass = worldspawn : "Worldspawn (exactly one per map)"
